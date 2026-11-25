@@ -28,6 +28,9 @@ let chatless = false;
 let shown = false;
 let setupOk = false;
 let introChecked = false;
+// The seen flag is saved the first time the plan page opens with its chat (by the intro or by
+// the player's own click), once per run.
+let introSaved = false;
 
 import { renderMarkdown as render } from './src/format.js';
 import { visibleHints } from './src/hint-view.js';
@@ -35,7 +38,7 @@ import { groupChats, dateLabel } from './src/chat-groups.js';
 import { errorLine, settlePending, activityLabel, workingHtml, elapsedText } from './src/answer-view.js';
 import { parseChoices, visibleText, answerFromChoices } from './src/choices.js';
 import { planCardModel, planCardHtml } from './src/plan-card.js';
-import { planPageState, canSwitch, cardMode, foldsWith, KICKOFF, START_LABEL, INTRO_TEXT, NO_PLAN_TEXT, NO_SNAPSHOT_TEXT } from './src/plan-page.js';
+import { planPageState, canSwitch, cardMode, foldsWith, KICKOFF, START_LABEL, INTRO_TEXT, NO_PLAN_TEXT, NO_SNAPSHOT_TEXT, NO_PLAN_CHAT_TEXT } from './src/plan-page.js';
 
 function add(kind, text) {
   const div = document.createElement('div');
@@ -334,12 +337,20 @@ async function setPage(next) {
   const res = await switchChat(() => window.fc.planPage(next === 'plan'));
   if (!res) return false;
   setPageView(next, { noChat: !res.chat });
+  if (page === 'plan' && res.chat) markIntroSeen();
   closeDrawer();
   if (res.chat) showChat(res.chat);
   else clearView();
   if (page === 'plan') refreshPlan();
   $('input').focus(); // an element focus only; the window is left alone
   return true;
+}
+
+// The player has seen the plan page: it never opens by itself again for this character.
+function markIntroSeen() {
+  if (introSaved) return;
+  introSaved = true;
+  window.fc.planIntroSeen().catch(() => { introSaved = false; });
 }
 
 // Re-reads the plan file and redraws the card (page shown, and after every answer).
@@ -353,29 +364,33 @@ async function refreshPlan() {
 function drawPlan() {
   const box = $('plan');
   if (page !== 'plan' || !planData) return box.replaceChildren();
-  const mode = cardMode({ hasSnapshot: planData.hasSnapshot, hasPlan: !!planData.plan, chatEmpty: messages.children.length === 0 });
+  const mode = cardMode({ hasSnapshot: planData.hasSnapshot, hasPlan: !!planData.plan, chatEmpty: messages.children.length === 0, hasPlanChat: planData.planChat !== false });
   if (mode === 'card') {
     box.innerHTML = planCardHtml(planCardModel(planData.plan, { level: planData.level, folds: planData.folds, nowSec: Math.floor(Date.now() / 1000) }));
     return;
   }
   const line = document.createElement('div');
   line.className = mode === 'start' ? '' : 'muted plan-note';
-  line.textContent = { start: INTRO_TEXT, none: NO_PLAN_TEXT, empty: NO_SNAPSHOT_TEXT }[mode];
+  line.textContent = { start: INTRO_TEXT, none: NO_PLAN_TEXT, empty: NO_SNAPSHOT_TEXT, unsupported: NO_PLAN_CHAT_TEXT }[mode];
   if (mode !== 'start') return box.replaceChildren(line);
   // Nothing is sent before this click.
   box.replaceChildren(line, hintButton('hint chip plan-start', '◆', START_LABEL, KICKOFF));
 }
 
 // The first-use plan page: once the player opens the overlay, for a character with data but
-// no plan that never saw it. Marked seen once shown; never forced again.
+// no plan that never saw it and has a plan chat. setPage marks it seen once it opens with its
+// chat; it is never forced again.
 async function maybeIntro() {
   if (introChecked || !setupOk || !shown || page === 'plan' || !canSwitch({ busy, switching })) return;
   introChecked = true;
   let d;
   try { d = await window.fc.gamePlan(); } catch { return; }
-  if (planPageState({ hasSnapshot: d?.hasSnapshot, hasPlan: !!d?.plan, introSeen: d?.introSeen }) !== 'intro') return;
-  if (await setPage('plan')) window.fc.planIntroSeen();
-  else introChecked = false; // refused (an answer started): try again on the next show
+  if (planPageState({ hasSnapshot: d?.hasSnapshot, hasPlan: !!d?.plan, introSeen: d?.introSeen, hasPlanChat: d?.planChat !== false }) !== 'intro') return;
+  // The player opened the plan page themselves meanwhile: that was the intro (setPage saved it).
+  if (page === 'plan') return;
+  // Refused (an answer started or a switch is under way): try again on the next show, unless
+  // that switch was the player's own click to the plan page, which already counts as seen.
+  if (!(await setPage('plan')) && !introSaved) introChecked = false;
 }
 
 async function runSetup() {
@@ -531,7 +546,7 @@ $('plan').addEventListener('click', (e) => {
   if (!folds) return;
   planData = { ...planData, folds };
   drawPlan();
-  window.fc.planFold(b.dataset.fold, open);
+  window.fc.planFold(b.dataset.fold, open).catch(() => {});
 });
 $('newchat').addEventListener('click', newChat);
 $('drawer-new').addEventListener('click', newChat);
