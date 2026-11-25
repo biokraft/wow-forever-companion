@@ -73,6 +73,9 @@ export class ClaudeClient extends EventEmitter {
   constructor({ command = 'claude', prefixArgs = [], cwd, env, model = 'sonnet', repo, resolve = resolveTool, spawn: spawnFn = spawn } = {}) {
     super();
     this.opts = { command, prefixArgs, cwd, env, repo, resolve, spawn: spawnFn };
+    // Sent with every message: a resumed chat remembers the toolkit path from when it started,
+    // and after the toolkit moved (another folder, a re-clone) that old path is not allowed.
+    this.toolkitHint = `[Run the toolkit exactly as \`${wowfCommand(repo)} <command>\`; command paths used earlier in this chat may no longer work.]`;
     this.model = model;
     this.sessionId = null;
     this.proc = null;

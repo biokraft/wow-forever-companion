@@ -564,3 +564,20 @@ test('a normal chat gets no plan preface', async () => {
   await s.send('hello');
   assert.equal(h.client.sent[0].text, 'hello');
 });
+
+test('every message tells the backend how to run the toolkit now, so a resumed chat never uses an old path', async () => {
+  const h = setup();
+  h.client.toolkitHint = '[Run the toolkit as `node /new/bin/wowf <command>`.]';
+  const session = h.make();
+  await session.send('first');
+  await session.send('second');
+  for (const s of h.client.sent) assert.match(s.text, /node \/new\/bin\/wowf/);
+  const saved = session.current().messages.filter((m) => m.role === 'user').map((m) => m.text);
+  assert.deepEqual(saved, ['first', 'second'], 'the hint is never saved or shown');
+});
+
+test('a backend without a toolkit hint sends the message unchanged', async () => {
+  const h = setup({ backend: 'pi' });
+  await h.make().send('hello');
+  assert.equal(h.client.sent[0].text, 'hello');
+});

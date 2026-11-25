@@ -139,7 +139,7 @@ export function createChatSession({ store, getClient, backend, character, now = 
     let preface = '';
     const build = () => {
       preface = replay ? replayPreface(earlier) : '';
-      return [preface, stale, isPlanChatId(target.id) ? PLAN_PREFACE : '', text].filter(Boolean).join('\n\n');
+      return [preface, stale, client.toolkitHint ?? '', isPlanChatId(target.id) ? PLAN_PREFACE : '', text].filter(Boolean).join('\n\n');
     };
 
     let answer;

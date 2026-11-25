@@ -353,3 +353,9 @@ test('on Windows the wowf command uses forward slashes, so Git Bash does not eat
   assert.ok(spaced.includes('Bash(node "C:/Program Files/wow-forever-companion/bin/wowf" npc *)'));
   assert.ok(claudeArgs({ repo: '/repo/', platform: 'darwin' }).includes('Bash(node /repo/bin/wowf state)'));
 });
+test('the client offers a toolkit hint naming the exact allowed command path', async () => {
+  const { ClaudeClient, wowfCommand } = await import('../src/claude-client.js');
+  const c = new ClaudeClient({ repo: '/some/repo', spawn: () => { throw new Error('not started'); } });
+  assert.ok(c.toolkitHint.includes(`${wowfCommand('/some/repo')} <command>`));
+  assert.match(c.toolkitHint, /earlier in this chat/);
+});
