@@ -58,3 +58,11 @@ test('compacting has its own plain label', async () => {
   const { activityLabel } = await import('../src/answer-view.js');
   assert.equal(activityLabel('compact'), 'Summarising earlier messages');
 });
+
+test('the chat counts as at the bottom within a small slack, so it stays pinned when the area shrinks', async () => {
+  const { nearBottom } = await import('../src/answer-view.js');
+  assert.equal(nearBottom({ scrollHeight: 1000, scrollTop: 700, clientHeight: 300 }), true, 'exactly at the bottom');
+  assert.equal(nearBottom({ scrollHeight: 1000, scrollTop: 680, clientHeight: 300 }), true, 'a few pixels above');
+  assert.equal(nearBottom({ scrollHeight: 1000, scrollTop: 500, clientHeight: 300 }), false, 'scrolled up to read');
+  assert.equal(nearBottom({ scrollHeight: 200, scrollTop: 0, clientHeight: 300 }), true, 'nothing to scroll');
+});

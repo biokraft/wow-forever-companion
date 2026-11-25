@@ -35,10 +35,19 @@ let introSaved = false;
 import { renderMarkdown as render } from './src/format.js';
 import { visibleHints } from './src/hint-view.js';
 import { groupChats, dateLabel } from './src/chat-groups.js';
-import { errorLine, settlePending, activityLabel, workingHtml, elapsedText } from './src/answer-view.js';
+import { nearBottom, errorLine, settlePending, activityLabel, workingHtml, elapsedText } from './src/answer-view.js';
 import { parseChoices, visibleText, answerFromChoices } from './src/choices.js';
 import { planCardModel, planCardHtml } from './src/plan-card.js';
 import { planPageState, canSwitch, cardMode, foldsWith, aiNoticeFor, KICKOFF, START_LABEL, INTRO_TEXT, NO_PLAN_TEXT, NO_SNAPSHOT_TEXT, NO_PLAN_CHAT_TEXT } from './src/plan-page.js';
+
+// The chat follows its end: whenever the message list or the area above the input changes
+// size (an answer grows, chips or hints appear, the input grows), it scrolls back to the
+// bottom, unless the player scrolled up to read.
+let pinned = true;
+messages.addEventListener('scroll', () => { pinned = nearBottom(messages); });
+const followEnd = () => { if (pinned) messages.scrollTop = messages.scrollHeight; };
+new ResizeObserver(followEnd).observe(messages);
+new MutationObserver(followEnd).observe(messages, { childList: true, subtree: true, characterData: true });
 
 function add(kind, text) {
   const div = document.createElement('div');
