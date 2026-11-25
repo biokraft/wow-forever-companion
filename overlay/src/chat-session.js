@@ -15,7 +15,7 @@ export const isCompactCommand = (text) => String(text ?? '').trim().toLowerCase(
 
 // Sent ahead of every turn in the game plan page's chat, to the backend only: never saved,
 // never shown. The player's own message stays the plain words they clicked or typed.
-export const PLAN_PREFACE = '[This is the game plan page: use the wow-gameplan skill. Ask one question at a time, with reply chips where a few clear answers fit, and save the plan with wowf gameplan write drafts/gameplan.json.]';
+export const PLAN_PREFACE = '[This is the game plan page: use the wow-gameplan skill. Ask one question at a time, with reply chips where a few clear answers fit, and save the plan as the wow-gameplan skill says.]';
 export const REPLAY_NOTE = 'The companion re-read this chat from the saved messages; details it looked up earlier are gone.';
 
 const PREFACE_START = '[Earlier messages of this chat, for context:]';

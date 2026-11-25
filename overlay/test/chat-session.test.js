@@ -542,7 +542,8 @@ test('every plan chat turn carries the backend-only game plan preface; the saved
   assert.equal(h.client.sent[0].text, `${PLAN_PREFACE}\n\nHelp me set up my game plan.`);
   assert.equal(h.client.sent[1].text, `${PLAN_PREFACE}\n\nQuesting`);
   assert.match(PLAN_PREFACE, /wow-gameplan/);
-  assert.match(PLAN_PREFACE, /wowf gameplan write drafts\/gameplan\.json/);
+  assert.match(PLAN_PREFACE, /save the plan as the wow-gameplan skill says/);
+  assert.doesNotMatch(PLAN_PREFACE, /wowf|wow_gameplan|drafts\//, 'backend-neutral: Pi and Claude Code save differently');
   const saved = h.store.load('gameplan-realm-thrall').messages.filter((m) => m.role === 'user').map((m) => m.text);
   assert.deepEqual(saved, ['Help me set up my game plan.', 'Questing']);
   assert.ok(!JSON.stringify(h.store.load('gameplan-realm-thrall')).includes('wow-gameplan'));

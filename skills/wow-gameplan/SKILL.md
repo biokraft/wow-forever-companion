@@ -89,7 +89,7 @@ Explain a choice in one short line only when the player asks or the options need
    (`text` 100, `level` a whole number 1–60 or left out); `notes` at most 1000.
 3. Write it:
    - Pi: `wow_gameplan` with action `write` and the plan object.
-   - Claude Code and the overlay: save it with the Write tool to `drafts/gameplan.json` in
+   - Claude Code, in the terminal or the overlay: save it with the Write tool to `drafts/gameplan.json` in
      the data folder, then run `wowf gameplan write drafts/gameplan.json` (in Claude Code
      `node "${CLAUDE_PLUGIN_ROOT}/bin/wowf" gameplan write drafts/gameplan.json`). Never pass
      the plan as a shell argument: an apostrophe breaks the quoting.
