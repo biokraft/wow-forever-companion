@@ -22,9 +22,11 @@ const ROLE_FIELDS = ['spec', 'weapons', 'notes'];
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const length = (s) => [...s].length; // code points, as the player sees them
 
-// Control characters other than line breaks, tabs included: they garble the card and the
-// prompt lines.
-const CONTROL = /[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f]/;
+// Control characters other than \n, tabs included, plus the invisible ones that break or
+// reorder a line: C1 controls (NEL among them), the line and paragraph separators, and the
+// bidi marks, embeddings, overrides and isolates. They garble the card and the plan line
+// that goes before every prompt.
+const CONTROL = /[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028-\u202e\u2066-\u2069]/;
 
 // One text field: returns the trimmed text, or undefined (with errors when it is wrong). Only
 // goal and notes may span lines: every other field can reach the one line put into every

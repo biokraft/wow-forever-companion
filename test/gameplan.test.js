@@ -161,6 +161,32 @@ test('control characters are refused everywhere, tabs included', () => {
   }
 });
 
+test('invisible line and direction characters are refused in every field', () => {
+  // NEL, the C1 range, line/paragraph separators, bidi embeddings/overrides/isolates and the
+  // direction marks: they break or reorder the one plan line that goes before every prompt.
+  const bad = ['\u0085', '\u0080', '\u009f', '\u2028', '\u2029', '\u202a', '\u202e', '\u2066', '\u2069', '\u200e', '\u200f', '\u061c'];
+  for (const c of bad) {
+    const r = validateGamePlan({
+      // In the middle: trim() would drop a trailing U+2028 harmlessly.
+      summary: `a${c}b`, goal: `g${c}g`, notes: `n${c}n`,
+      role: { spec: `s${c}s`, weapons: `w${c}w`, notes: `r${c}r` },
+      playstyle: [`p${c}p`], avoid: [`v${c}v`],
+      professions: [{ name: `m${c}m`, why: `y${c}y` }],
+      milestones: [{ text: `t${c}t` }],
+    });
+    const hex = c.codePointAt(0).toString(16);
+    assert.equal(r.ok, false, hex);
+    for (const f of ['summary', 'goal', 'notes', 'role.spec', 'role.weapons', 'role.notes', 'playstyle[0]', 'avoid[0]', 'professions[0].name', 'professions[0].why', 'milestones[0].text']) {
+      assert.ok(r.errors.some((e) => e.startsWith(`${f}: contains control characters`)), `${hex} ${f}\n${r.errors.join('\n')}`);
+    }
+  }
+});
+
+test('plain accents, emoji and other scripts stay allowed', () => {
+  const r = validateGamePlan({ summary: 'Jäger — Überleben 🏹', goal: 'Erreiche Stufe 60\nmit Freunden', notes: 'Ελληνικά, 日本語, عربى' });
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+});
+
 test('a too-long field with a line break gets both errors in one round', () => {
   const r = validateGamePlan({ summary: 'ok', goal: 'ok', milestones: [{ text: `${'x'.repeat(60)}\n${'y'.repeat(60)}` }] });
   assert.ok(r.errors.includes('milestones[0].text: 121 characters, at most 100'), r.errors.join('\n'));
