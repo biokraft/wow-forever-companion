@@ -1,0 +1,52 @@
+{
+  "classFile": "WARRIOR",
+  "checked": "2026-11-25",
+  "sources": [
+    "https://www.warcrafttavern.com/forever/guides/warrior-leveling/",
+    "https://www.warcrafttavern.com/forever/guides/warrior/",
+    "https://timesaver.gg/blog/wow-forever-warrior-leveling-weapons",
+    "https://www.method.gg/wow-forever/wow-forever-warrior-leveling-guide-and-talents",
+    "https://us.forums.blizzard.com/en/wow/t/major-class-final-tuning/2399448",
+    "https://warcraft.wiki.gg/wiki/Attack_power",
+    "https://warcraft.wiki.gg/wiki/Weapon_master"
+  ],
+  "note": "Leveling weights for a two-handed Arms warrior in WoW: Forever, relative to Strength = 1. Warcraft Tavern's Forever priority is weapon > Strength/AP > Stamina > Agility > Armor; Method says weapon damage drives nearly all leveling damage. Weapon DPS raised from 4 to 7 because 14 AP = 1 DPS and 1 Str = 2 melee AP, so 1 weapon DPS is worth about 7 Str (Classic formula, wiki). Agility gives no melee AP to warriors, only crit and armor. Crit is valued above Classic because Forever crits give extra rage and Weaponmaster adds crit for axes/polearms (Timesaver). Plate is trained at 40. Weights are a heuristic, not a simulation; the score ignores weapon speed and on-use/proc effects.",
+  "armor": [
+    "Cloth",
+    "Leather",
+    "Mail",
+    "Shields",
+    "Miscellaneous"
+  ],
+  "armorFrom40": [
+    "Plate"
+  ],
+  "weapons": [
+    "One-Handed Axes",
+    "Two-Handed Axes",
+    "One-Handed Maces",
+    "Two-Handed Maces",
+    "One-Handed Swords",
+    "Two-Handed Swords",
+    "Polearms",
+    "Staves",
+    "Daggers",
+    "Fist Weapons",
+    "Bows",
+    "Crossbows",
+    "Guns",
+    "Thrown"
+  ],
+  "statWeights": {
+    "ITEM_MOD_STRENGTH_SHORT": 1.0,
+    "ITEM_MOD_AGILITY_SHORT": 0.6,
+    "ITEM_MOD_STAMINA_SHORT": 0.4,
+    "ITEM_MOD_SPIRIT_SHORT": 0.1,
+    "ITEM_MOD_INTELLECT_SHORT": 0,
+    "ITEM_MOD_DAMAGE_PER_SECOND_SHORT": 7.0,
+    "ITEM_MOD_CRIT_RATING_SHORT": 8.0,
+    "ITEM_MOD_HIT_RATING_SHORT": 8.0,
+    "armor": 0.02
+  },
+  "dualWieldLevel": 20
+}

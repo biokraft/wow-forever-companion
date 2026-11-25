@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in Forever Companion does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please do not paste chat text or screenshots that show other players' names.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `node bin/wowf doctor`
+      description: Run it in the Forever Companion folder and paste the result. It shows your home folder as `~` and contains no character names.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+  - type: input
+    id: backend
+    attributes:
+      label: AI backend (pi or claude)

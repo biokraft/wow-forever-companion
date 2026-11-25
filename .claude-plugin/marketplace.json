@@ -1,0 +1,15 @@
+{
+  "name": "forever-companion",
+  "description": "Marketplace for Forever Companion, the WoW: Forever advisor.",
+  "owner": {
+    "name": "biokraft"
+  },
+  "plugins": [
+    {
+      "name": "forever-companion",
+      "description": "WoW: Forever leveling, questing, gear, talent and profession advisor.",
+      "version": "0.4.0",
+      "source": "./"
+    }
+  ]
+}

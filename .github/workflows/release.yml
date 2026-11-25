@@ -1,0 +1,75 @@
+name: Release
+
+# A pushed tag v<version> becomes a GitHub Release with that version's CHANGELOG.md section
+# and the addon zip. Tags are pushed by the forever-companion-release skill.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests and privacy scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Core tests (CLI, sync, Questie reader, Pi package)
+        run: npm test
+      - name: Privacy scan (no personal data in tracked files)
+        run: node scripts/privacy-scan.js
+      - name: Overlay tests (no Electron needed)
+        run: node --test "overlay/test/*.test.js"
+      - uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: 5.1.5 # the Lua version WoW runs
+      - name: Addon tests (Lua 5.1 with a stubbed WoW API)
+        run: lua addon/test/run.lua
+
+  release:
+    name: GitHub Release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tag matches the package.json version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG does not match package.json version $version"
+            exit 1
+          fi
+      - name: Build the addon zip
+        run: |
+          node --input-type=module -e "
+            import fs from 'node:fs';
+            import { buildPublicTree, buildAddonZip } from './scripts/release.js';
+            const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
+            buildPublicTree('dist/public');
+            console.log(buildAddonZip('dist/public', 'dist', version));
+          "
+      - name: Release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
+        run: node scripts/bump-version.js --notes "${TAG#v}" > notes.md
+      - name: Create the GitHub Release
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$TAG" dist/ForeverLog-*.zip --verify-tag --title "Forever Companion ${TAG#v}" --notes-file notes.md

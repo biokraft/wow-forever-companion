@@ -1,0 +1,161 @@
+/* Forever Companion overlay: a look-alike of classic WoW frames, drawn entirely in CSS
+   (no Blizzard art or fonts). Gold = WoW UI yellow, frame = dark stone with a bronze rim. */
+:root {
+  --gold: #ffd100;
+  --gold-dim: #c8a24a;
+  --bronze: #8a6a2e;
+  --bronze-dark: #3a2a12;
+  --ink: #f2ead8;
+  --muted: #a79b86;
+  --quote: #e6d3a8;        /* the player's own lines, set like quest text */
+  --npc: #ffd100;
+  --bg-top: #121014;
+  --bg-bottom: #08080c;
+  --font: "Friz Quadrata TT", "Friz Quadrata", Optima, "Palatino Linotype", Palatino, Georgia, serif; /* titles only */
+  --body: Tahoma, Verdana, Arial, sans-serif; /* regular width, hinted for non-Retina screens; ships with macOS */
+  --outline: 1px 1px 0 #000;
+}
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); font: 14px/1.45 var(--body); -webkit-font-smoothing: auto; }
+
+/* Frame: bronze outer rim, dark inner rim, stone gradient, inner glow like WoW panels. */
+#panel {
+  position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+  border: 2px solid var(--bronze);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--bronze-dark);
+}
+/* Corner studs */
+#panel::before, #panel::after {
+  content: ""; position: absolute; width: 8px; height: 8px; top: 3px; border-radius: 50%;
+  background: #c8a24a;
+  border: 1px solid #2a1d08;
+}
+#panel::before { left: 3px; }
+#panel::after { right: 3px; }
+
+/* Title bar, like a WoW frame header */
+#bar {
+  display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 16px; flex: none;
+  -webkit-app-region: drag;
+  background: #1d150a;
+  border-bottom: 1px solid var(--bronze);
+  box-shadow: 0 1px 0 var(--bronze-dark);
+}
+#bar .brand { color: var(--gold); font: 600 15px var(--font); font-variant: small-caps; letter-spacing: 0.4px; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
+#bar .brand .mark { width: 18px; height: 18px; margin-right: 6px; vertical-align: -3px; }
+#status { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--body); color: var(--muted); text-shadow: var(--outline); }
+#bar button { -webkit-app-region: no-drag; cursor: pointer; }
+/* Collapse: small bronze square; close: the round red WoW close button */
+#collapse { width: 18px; height: 18px; padding: 0; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 12px/14px var(--font); }
+#close { width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 1px solid #2a0a06; color: #ffd6c8; font: bold 12px/18px Arial, sans-serif; background: #9b1d10; box-shadow: 0 0 0 1px var(--bronze); }
+#collapse:hover, #close:hover { filter: brightness(1.25); }
+
+.muted { color: var(--muted); }
+.thinking .dots { display: inline-block; width: 3ch; text-align: left; }
+.thinking .dots::after { content: ""; animation: thinking-dots 2.1s steps(1) infinite; }
+@keyframes thinking-dots { 0% { content: ""; } 16.67% { content: "."; } 33.33% { content: ".."; } 50% { content: "..."; } 66.67% { content: ".."; } 83.33% { content: "."; } }
+@media (prefers-reduced-motion: reduce) { .thinking .dots::after { animation: none; content: "…"; } }
+#chat { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+#messages { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; text-shadow: var(--outline); }
+#messages::-webkit-scrollbar, #input::-webkit-scrollbar, #drawer::-webkit-scrollbar { width: 6px; }
+#messages::-webkit-scrollbar-thumb, #input::-webkit-scrollbar-thumb, #drawer::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #6b5222, #c8a24a, #6b5222); border-radius: 4px; }
+#messages::-webkit-scrollbar-track, #input::-webkit-scrollbar-track, #drawer::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.35); }
+
+/* The player's lines read like quest text: an italic quote with a bronze bar */
+.msg { min-width: 0; overflow-wrap: anywhere; }
+.msg.user { color: var(--quote); font-style: italic; white-space: pre-wrap; padding: 2px 0 2px 8px; border-left: 2px solid var(--bronze); }
+.msg.bot { color: var(--ink); white-space: normal; }
+.msg.bot::before { content: "Companion"; display: block; color: var(--gold); font: 600 13px var(--font); font-variant: small-caps; margin-bottom: 2px; }
+.msg.bot strong { color: var(--gold); font-weight: 400; }
+.msg.bot em { color: #e6d3a8; }
+.msg code { background: rgba(255, 209, 0, 0.08); border: 1px solid rgba(200, 162, 74, 0.3); padding: 0 3px; border-radius: 2px; font: 12px Menlo, monospace; color: var(--gold-dim); }
+.msg.bot p { margin: 0 0 6px; }
+.msg.bot h2, .msg.bot h3, .msg.bot h4, .msg.bot h5, .msg.bot h6 { margin: 8px 0 4px; font: 600 14px var(--font); color: var(--gold); font-variant: small-caps; letter-spacing: 0.3px; }
+.msg.bot ul, .msg.bot ol { margin: 0 0 6px; padding-left: 18px; }
+.msg.bot li { margin: 1px 0; }
+.msg.bot li::marker { color: var(--gold-dim); }
+.msg.bot hr { border: 0; height: 1px; margin: 8px 0; background: linear-gradient(90deg, transparent, var(--bronze), transparent); }
+.msg.bot table { width: 100%; margin: 0 0 6px; border-collapse: collapse; font-size: 13px; }
+.msg.bot th, .msg.bot td { padding: 2px 6px; text-align: left; vertical-align: top; border: 1px solid var(--bronze-dark); }
+.msg.bot th { color: var(--gold); font-weight: 400; background: #1d150a; border-bottom-color: var(--bronze); }
+.msg.bot tbody tr:nth-child(even) td { background: rgba(255, 209, 0, 0.04); }
+.msg.bot blockquote { margin: 0 0 6px; padding-left: 8px; border-left: 2px solid var(--bronze); color: var(--muted); }
+.msg.note { color: var(--muted); font-size: 12px; font-style: italic; }
+.msg.error { color: #ff6060; }
+
+/* Hints: rows on the empty chat, chips above the input. Never animated; hover only recolours. */
+#welcome { flex: none; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 0; }
+#hint-rows { display: flex; flex-direction: column; gap: 4px; }
+#hint-rows:empty { display: none; }
+#starters { display: flex; flex-wrap: wrap; gap: 6px; }
+#hintbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.hint { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; padding: 2px 8px; cursor: pointer; text-align: left;
+  color: var(--ink); font: 12px/1.4 var(--body); text-shadow: var(--outline);
+  background: #0b0906; border: 1px solid var(--bronze); border-radius: 3px; }
+.hint .mark { flex: none; color: var(--gold); }
+.hint .label { min-width: 0; overflow-wrap: anywhere; }
+.hint:hover:not(:disabled) { border-color: var(--gold); }
+.hint:disabled { cursor: default; opacity: 0.5; }
+.hint.hint-row { display: flex; width: 100%; }
+.hint.chip .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.hint.starter { color: var(--muted); }
+.hint.starter .mark { color: var(--muted); }
+
+/* Header buttons for the saved chats: the same small bronze squares as collapse */
+#history, #newchat { width: 18px; height: 18px; padding: 0; flex: none; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 12px/14px var(--font); }
+#history:hover, #newchat:hover:not(:disabled) { filter: brightness(1.25); }
+#newchat:disabled { cursor: default; opacity: 0.5; }
+
+/* Saved chats drawer: covers the chat (input included) with the panel's own background.
+   Opens and closes without animation; hover only recolours. */
+#chat { position: relative; }
+#drawer { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; overflow-y: auto; overflow-x: hidden;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom)); text-shadow: var(--outline); }
+.drawer-new { flex: none; align-self: flex-start; margin-bottom: 4px; padding: 2px 8px; cursor: pointer; color: var(--gold); font: 12px/1.4 var(--body); text-shadow: var(--outline);
+  background: #0b0906; border: 1px solid var(--bronze); border-radius: 3px; }
+.drawer-new:hover:not(:disabled) { border-color: var(--gold); }
+.drawer-new:disabled { cursor: default; opacity: 0.5; }
+#chatlist { display: flex; flex-direction: column; gap: 2px; }
+.chat-group { margin: 6px 0 2px; color: var(--gold-dim); font: 600 12px var(--font); font-variant: small-caps; letter-spacing: 0.3px; }
+.chat-none { font: 12px var(--body); font-style: italic; }
+.chat-row { display: flex; align-items: center; gap: 4px; min-width: 0; border-left: 2px solid transparent; }
+.chat-row.open { border-left-color: var(--gold); }
+.chat-title { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; cursor: pointer; text-align: left;
+  color: var(--ink); font: 13px/1.4 var(--body); text-shadow: var(--outline); background: none; border: 0; }
+.chat-title .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-title .when { flex: none; color: var(--muted); font-size: 12px; }
+.chat-title:hover:not(:disabled) { color: var(--gold); }
+.chat-title:disabled { cursor: default; opacity: 0.5; }
+.chat-del { flex: none; visibility: hidden; padding: 0 6px; cursor: pointer; color: var(--muted); font: 13px/1.4 var(--body); text-shadow: var(--outline); background: none; border: 0; }
+.chat-row:hover .chat-del, .chat-del.confirm { visibility: visible; }
+.chat-del:hover:not(:disabled), .chat-del.confirm { color: #ff6060; }
+.chat-del:disabled { cursor: default; opacity: 0.5; }
+
+/* Edit box like the WoW chat input */
+#ask { padding: 8px 10px 9px; flex: none; border-top: 1px solid var(--bronze); box-shadow: inset 0 1px 0 var(--bronze-dark); background: rgba(0, 0, 0, 0.35); }
+#input { width: 100%; resize: none; color: var(--ink); font: 14px/1.45 var(--body); padding: 6px 8px; border-radius: 3px;
+  background: #050506; border: 1px solid var(--bronze); }
+#input::placeholder { color: #6f6656; }
+#input:focus { outline: none; border-color: var(--gold); }
+.row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; }
+.look { display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--gold-dim); font: 12px/13px var(--body); text-transform: capitalize; text-shadow: var(--outline); }
+.look input { appearance: none; width: 13px; height: 13px; margin: 0; border: 1px solid var(--bronze); background: #0b0906; border-radius: 2px; position: relative; cursor: pointer; }
+.look input:checked::after { content: "✓"; position: absolute; left: 1px; top: -3px; color: var(--gold); font-size: 13px; }
+#model { max-width: 170px; color: var(--gold-dim); font: 12px var(--body); background: #0b0906; border: 1px solid var(--bronze); border-radius: 3px; }
+#opacity { appearance: none; width: 70px; height: 4px; margin: 0; border-radius: 2px; background: var(--bronze-dark); border: 1px solid var(--bronze); cursor: pointer; }
+#opacity::-webkit-slider-thumb { appearance: none; width: 10px; height: 12px; border-radius: 2px; background: var(--gold-dim); border: 1px solid #2a1d08; }
+#opacity:focus { outline: none; border-color: var(--gold); }
+#usage { margin-left: auto; color: var(--muted); font: 12px var(--body); text-shadow: var(--outline); }
+
+/* Setup checklist */
+#setup { padding: 14px 16px; }
+#setup h2 { margin: 0 0 10px; font-size: 14px; font-weight: normal; color: var(--gold); font-variant: small-caps; }
+#setup li { margin-bottom: 8px; }
+#setup button { cursor: pointer; padding: 4px 14px; border-radius: 3px; color: var(--gold); font: 12px var(--font);
+  background: linear-gradient(#8c1c10, #4c0b06); border: 1px solid var(--bronze); box-shadow: inset 0 1px 0 rgba(255,255,255,0.15); }
+
+body.collapsed #chat, body.collapsed #setup { display: none; }
+body.collapsed #history, body.collapsed #newchat { display: none; }
