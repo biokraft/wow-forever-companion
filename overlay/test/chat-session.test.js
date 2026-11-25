@@ -491,3 +491,43 @@ test('the compact note is not replayed to the backend as something that was said
   await session.send('q2');
   assert.ok(!s.client.sent[0].text.includes(COMPACT_NOTE));
 });
+
+// ---- The game plan page's chat ----
+
+test('openPlan starts the plan chat under its own id and saves it, never in the list', async () => {
+  const h = setup({ script: ['Let us start.'] });
+  const s = h.make();
+  const chat = s.openPlan('gameplan-realm-thrall');
+  assert.equal(chat.id, 'gameplan-realm-thrall');
+  assert.deepEqual(chat.messages, []);
+  assert.deepEqual(h.client.opened, [null], 'a fresh backend conversation');
+  await s.send('Help me set up my game plan.');
+  assert.equal(h.store.load('gameplan-realm-thrall').messages.length, 2);
+  assert.deepEqual(h.store.list({ character: 'Thrall' }), []);
+});
+
+test('openPlan reopens a saved plan chat through the normal resume path', async () => {
+  const h = setup();
+  const s = h.make();
+  s.openPlan('gameplan-realm-thrall');
+  await s.send('q1');
+  const saved = h.store.load('gameplan-realm-thrall');
+  s.startNew();
+  h.client.opened.length = 0;
+  const back = s.openPlan('gameplan-realm-thrall');
+  assert.deepEqual(back.messages.map((m) => m.text), ['q1', 'answer 1']);
+  assert.deepEqual(h.client.opened, [saved.backendSessionId], 'resumes its own backend session');
+  h.client.opened.length = 0;
+  assert.equal(s.openPlan('gameplan-realm-thrall'), back, 'already open: nothing switches');
+  assert.deepEqual(h.client.opened, []);
+});
+
+test('openPlan refuses an id that is not a plan chat id', () => {
+  const h = setup();
+  const s = h.make();
+  const before = s.current();
+  assert.equal(s.openPlan('../x'), null);
+  assert.equal(s.openPlan('20260101-000000-aaaa'), null);
+  assert.equal(s.current(), before);
+  assert.deepEqual(h.client.opened, []);
+});

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createChatStore, titleFrom } from '../src/chat-store.js';
+import { createChatStore, titleFrom, planChatId } from '../src/chat-store.js';
 
 const ID_RE = /^[0-9]{8}-[0-9]{6}-[a-z0-9]{4}$/;
 
@@ -198,4 +198,30 @@ test('a chat without a character name is never listed', () => {
   assert.deepEqual(store.list({}), []);
   assert.deepEqual(store.list({ character: undefined }), []);
   assert.deepEqual(store.list({ character: 7 }), []);
+});
+
+// ---- The game plan page's chat ----
+
+test('the plan chat id is gameplan-<slug>, only for a real slug', () => {
+  assert.equal(planChatId('realm-thrall'), 'gameplan-realm-thrall');
+  assert.equal(planChatId(''), null);
+  assert.equal(planChatId('../x'), null);
+  assert.equal(planChatId(undefined), null);
+});
+
+test('the plan chat saves and loads like any chat but never appears in the chat list', () => {
+  const dir = tmp();
+  const store = createChatStore({ dir, now: clock(100) });
+  const normal = store.newChat({ character: 'Thrall', backend: 'claude' });
+  normal.messages.push({ role: 'user', text: 'hi', at: 1 });
+  store.save(normal);
+  const plan = { ...store.newChat({ character: 'Thrall', backend: 'claude' }), id: planChatId('realm-thrall') };
+  plan.messages.push({ role: 'user', text: 'Help me set up my game plan.', at: 2 });
+  store.save(plan);
+  assert.ok(fs.existsSync(path.join(dir, 'gameplan-realm-thrall.json')));
+  assert.deepEqual(store.load(plan.id), plan);
+  assert.deepEqual(store.list({ character: 'Thrall' }).map((c) => c.id), [normal.id]);
+  store.remove(plan.id);
+  assert.equal(store.load(plan.id), null);
+  assert.throws(() => store.save({ ...plan, id: 'gameplan-../x' }));
 });

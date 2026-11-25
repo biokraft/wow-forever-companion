@@ -3,6 +3,17 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 const ID_RE = /^[0-9]{8}-[0-9]{6}-[a-z0-9]{4}$/;
+// The game plan page's chat, one per character: saved like any chat, never in the chat list.
+const PLAN_ID_RE = /^gameplan-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const validId = (id) => typeof id === 'string' && (ID_RE.test(id) || PLAN_ID_RE.test(id));
+
+/** The plan page's chat id for a character slug (src/slug.js), or null for anything else. */
+export function planChatId(slug) {
+  const id = `gameplan-${slug}`;
+  return typeof slug === 'string' && PLAN_ID_RE.test(id) ? id : null;
+}
+
+export const isPlanChatId = (id) => typeof id === 'string' && PLAN_ID_RE.test(id);
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const TITLE_MAX = 40;
 
@@ -56,7 +67,7 @@ export function createChatStore({ dir, now = () => Math.floor(Date.now() / 1000)
     for (const name of names) {
       if (!name.endsWith('.json')) continue;
       const id = name.slice(0, -'.json'.length);
-      if (!ID_RE.test(id)) continue;
+      if (!ID_RE.test(id)) continue; // plan chats (gameplan-<slug>) are left out too
       const chat = readChat(id);
       if (!chat || typeof chat.character !== 'string' || chat.character !== character) continue;
       out.push({ id, title: chat.title, updatedAt: chat.updatedAt });
@@ -65,12 +76,12 @@ export function createChatStore({ dir, now = () => Math.floor(Date.now() / 1000)
   }
 
   function load(id) {
-    if (typeof id !== 'string' || !ID_RE.test(id)) return null;
+    if (!validId(id)) return null;
     return readChat(id);
   }
 
   function save(chat) {
-    if (!chat || typeof chat.id !== 'string' || !ID_RE.test(chat.id)) {
+    if (!chat || !validId(chat.id)) {
       throw new Error(`invalid chat id: ${chat && chat.id}`);
     }
     chat.updatedAt = now();
@@ -89,7 +100,7 @@ export function createChatStore({ dir, now = () => Math.floor(Date.now() / 1000)
   }
 
   function remove(id) {
-    if (typeof id !== 'string' || !ID_RE.test(id)) return;
+    if (!validId(id)) return;
     fs.rmSync(fileOf(id), { force: true });
   }
 

@@ -4,6 +4,7 @@
 // client that getClient() returns. No Electron here.
 import { isSessionId } from './session-id.js';
 import { parseChoices } from './choices.js';
+import { isPlanChatId } from './chat-store.js';
 
 export const STALE_AFTER_SEC = 1800;
 export const REPLAY_MESSAGES = 30;
@@ -99,6 +100,19 @@ export function createChatSession({ store, getClient, backend, character, now = 
     return chat;
   }
 
+  // The game plan page's chat (id from planChatId): reopened like any saved chat (resume or
+  // replay), or started under that id when it has no file yet. Already open: nothing switches.
+  function openPlan(id) {
+    if (!isPlanChatId(id)) return null;
+    if (chat.id === id) return chat;
+    if (store.load(id)) return open(id);
+    getClient().openSession(null);
+    chat = { ...store.newChat({ character, backend }), id, title: 'Game plan' };
+    replay = false;
+    openedAt = null;
+    return chat;
+  }
+
   function openLatest({ maxAgeSec = 43200 } = {}) {
     const [newest] = store.list({ character });
     if (newest && now() - newest.updatedAt <= maxAgeSec) {
@@ -113,7 +127,7 @@ export function createChatSession({ store, getClient, backend, character, now = 
     const client = getClient();
     const earlier = target.messages.slice();
     fresh = [];
-    if (earlier.length === 0) target.title = store.titleFrom(text);
+    if (earlier.length === 0 && !isPlanChatId(target.id)) target.title = store.titleFrom(text);
     target.messages.push({ role: 'user', text, at: now() });
     store.save(target);
 
@@ -171,5 +185,5 @@ export function createChatSession({ store, getClient, backend, character, now = 
     return { openChanged: true };
   }
 
-  return { current, startNew, open, openLatest, send, remove, compact, noteCompacted };
+  return { current, startNew, open, openPlan, openLatest, send, remove, compact, noteCompacted };
 }
