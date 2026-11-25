@@ -21,7 +21,7 @@ export function gitSafeToRun({
 } = {}) {
   if (platform !== 'darwin') return true;
   if (toolsInstalled()) return true;
-  const first = pathEnv.split(':').filter(Boolean).find((dir) => exists(path.join(dir, 'git')));
+  const first = pathEnv.split(':').filter(Boolean).find((dir) => exists(path.posix.join(dir, 'git')));
   return Boolean(first) && first !== '/usr/bin';
 }
 

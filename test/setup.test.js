@@ -474,7 +474,7 @@ test('overlay: a path.txt whose program is missing counts as not installed, and 
   assert.ok(w.calls.run.some(([cmd, args]) => cmd === 'npm' && args[0] === 'ci'));
   const o = step(r, 'overlay');
   assert.equal(o.status, 'failed');
-  assert.equal(o.text, electronMissingText('v22.3.0'));
+  assert.equal(o.text, electronMissingText('v22.3.0', 'darwin'));
   assert.match(o.text, /^The chat overlay's Electron app did not install on Node v22\.3\.0\. [^\n]*node bin\/wowf setup[^\n]*\.$/);
 });
 
