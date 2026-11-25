@@ -50,9 +50,20 @@ export function updateHint(update) {
   return [{ key: 'update', kind: 'update', label: `${update.latest} is out`, text: 'run: node bin/wowf update', prompt: null }];
 }
 
-/** Hints in the order shown: the update notice first, then the nudges by priority. */
+// While the character has no game plan (readCharacter sets gamePlan to null): a hint that opens
+// the plan page. It sends nothing (prompt null; the page acts on `action`), is never dismissed
+// and goes once a plan exists. Unknown (no gamePlan field at all): no hint.
+export function planHint(merged) {
+  if (!merged || merged.gamePlan !== null) return [];
+  return [{ key: 'gameplan', kind: 'gameplan', label: 'Set up your game plan', text: 'Opens the Plan page', prompt: null, action: 'open-plan' }];
+}
+
+/**
+ * Hints in the order shown: the update notice first, then the game plan hint, then the nudges
+ * by priority.
+ */
 export function buildHints({ merged, synced, dismissed = new Set(), update } = {}) {
-  return [...updateHint(update), ...nudgeHints({ merged, synced, dismissed })];
+  return [...updateHint(update), ...planHint(merged), ...nudgeHints({ merged, synced, dismissed })];
 }
 
 function nudgeHints({ merged, synced, dismissed }) {

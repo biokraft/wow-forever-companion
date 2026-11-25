@@ -149,3 +149,31 @@ test('the update hint takes no row, chip or starter slot from the chat hints', (
   assert.deepEqual(mid.chips[0], UPDATE);
   assert.equal(mid.chips.length, 1 + MAX_CHIPS);
 });
+
+// ---- The game plan hint ----
+
+const PLAN_HINT = { key: 'gameplan', kind: 'gameplan', label: 'Set up your game plan', text: 'Opens the Plan page', prompt: null, action: 'open-plan' };
+
+test('without a game plan a "Set up your game plan" hint opens the plan page and sends nothing', () => {
+  const s = snap({ gamePlan: null, nudges: [nudge('rested')] });
+  const hints = buildHints({ merged: s, synced: s, update: { latest: '0.4.1', newer: true } });
+  assert.deepEqual(hints.map((h) => h.kind), ['update', 'gameplan', 'rested']);
+  assert.deepEqual(hints[1], PLAN_HINT);
+});
+
+test('no game plan hint once a plan exists, or when it is not known', () => {
+  const withPlan = snap({ gamePlan: { summary: 'S', goal: 'G' }, nudges: [nudge('rested')] });
+  assert.deepEqual(buildHints({ merged: withPlan, synced: withPlan }).map((h) => h.kind), ['rested']);
+  const unknown = snap({ nudges: [nudge('rested')] });
+  assert.deepEqual(buildHints({ merged: unknown, synced: unknown }).map((h) => h.kind), ['rested']);
+  assert.deepEqual(buildHints({ merged: null }), []);
+});
+
+test('the game plan hint is never dismissed and takes no chat hint slot', () => {
+  const s = snap({ gamePlan: null, nudges: ['quests_ready', 'talent_points', 'trainer_due', 'bags_full', 'rested'].map((k) => nudge(k)) });
+  const live = buildHints({ merged: s, synced: s, dismissed: new Set(['gameplan']) });
+  assert.equal(live[0].key, 'gameplan');
+  const mid = visibleHints({ live, starters: STARTERS, empty: false });
+  assert.equal(mid.chips[0].key, 'gameplan');
+  assert.equal(mid.chips.length, 1 + MAX_CHIPS);
+});
