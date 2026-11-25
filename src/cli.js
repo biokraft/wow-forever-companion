@@ -68,16 +68,41 @@ function parseArgs(argv) {
 
 const out = (s) => process.stdout.write(s.endsWith('\n') ? s : s + '\n');
 
-// JSON from a file, stdin (-) or --json '<inline>', for plan write and gameplan write.
-function readJsonInput(cmd, what, src, inline) {
-  if (src && src !== '-' && src.split(/[\\/]/).includes('..')) throw new UsageError(`${cmd}: paths with .. are not allowed`);
-  if (!src && !inline) throw new UsageError(`${cmd} needs a file path, - for stdin, or --json '<${what}>'`);
-  try {
-    return JSON.parse(inline ?? fs.readFileSync(src === '-' ? 0 : src, 'utf8'));
-  } catch (e) {
-    // Don't echo the parser's message: it quotes the file's contents.
-    throw new UsageError(e instanceof SyntaxError ? `could not read ${what} JSON: the file is not valid JSON` : `could not read ${what} JSON: ${e.code ?? 'read error'}`);
+// JSON from a file, stdin (-) or --json '<inline>', for plan write and gameplan write. The
+// overlay's sandbox allows `<cmd> write --json *` and `<cmd> write drafts/*`, so neither may
+// reach a file outside the working folder (the data folder there): --json takes only an inline
+// value and never a path, and a path must be relative, without .., and must not resolve
+// (through links) to a file outside the folder.
+function readJsonInput(cmd, what, src, json) {
+  if (json !== undefined) {
+    if (typeof json !== 'string') throw new UsageError(`${cmd}: --json needs the ${what} JSON as its value, e.g. --json '{...}'`);
+    if (src) throw new UsageError(`${cmd}: give a file or --json, not both`);
   }
+  if (!src && !json) throw new UsageError(`${cmd} needs a file path, - for stdin, or --json '<${what}>'`);
+  let text;
+  try {
+    text = json || fs.readFileSync(src === '-' ? 0 : insideCwd(cmd, src), 'utf8');
+  } catch (e) {
+    if (e instanceof UsageError) throw e;
+    throw new UsageError(`could not read ${what} JSON: ${e.code ?? 'read error'}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Don't echo the parser's message: it quotes the file's contents.
+    throw new UsageError(`could not read ${what} JSON: the file is not valid JSON`);
+  }
+}
+
+function insideCwd(cmd, src) {
+  const outside = () => new UsageError(`${cmd}: use a file inside the current folder (e.g. drafts/plan.json), - for stdin, or --json`);
+  if (src.split(/[\\/]/).includes('..')) throw new UsageError(`${cmd}: paths with .. are not allowed`);
+  if (path.posix.isAbsolute(src) || path.win32.isAbsolute(src) || /^[a-z]:/i.test(src)) throw outside();
+  const cwd = fs.realpathSync(process.cwd());
+  const real = fs.realpathSync(path.resolve(cwd, src)); // a missing file throws ENOENT
+  const rel = path.relative(cwd, real);
+  if (!rel || rel.split(path.sep)[0] === '..' || path.isAbsolute(rel)) throw outside();
+  return real;
 }
 
 // The live line and the game plan line from one read of the character; [] on any error.
@@ -291,7 +316,7 @@ const commands = {
     const plansDir = path.join(cfg.dataDir, 'plans');
     const sub = positional[1];
     if (sub === 'write') {
-      const input = readJsonInput('plan write', 'plan', positional[2], typeof opts.json === 'string' ? opts.json : null);
+      const input = readJsonInput('plan write', 'plan', positional[2], opts.json);
       out(writePlan(cfg, input).lines.join('\n'));
       return 0;
     }
@@ -319,7 +344,7 @@ const commands = {
     const slug = characterSlug(cfg, typeof opts.char === 'string' ? opts.char : undefined);
     const sub = positional[1];
     if (sub === 'write') {
-      const input = readJsonInput('gameplan write', 'game plan', positional[2], typeof opts.json === 'string' ? opts.json : null);
+      const input = readJsonInput('gameplan write', 'game plan', positional[2], opts.json);
       out(`Game plan saved: ${writeGamePlan(cfg, slug, input).plan.summary}`);
       return 0;
     }

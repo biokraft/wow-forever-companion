@@ -132,7 +132,7 @@ test('plan write emits the addon plan file and a JSON copy in the data folder', 
   fs.mkdirSync(addonDir(), { recursive: true });
   const file = path.join(root, 'plan.json');
   fs.writeFileSync(file, JSON.stringify(goodPlan));
-  const r = run(['plan', 'write', file]);
+  const r = run(['plan', 'write', path.basename(file)]);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /Plan pushed: 1 step for Testa.*\/fc sync/);
   const lua = fs.readFileSync(path.join(addonDir(), 'ForeverLog_Plan.lua'), 'utf8');
@@ -159,12 +159,12 @@ test('plan write with invalid input exits 1 and writes nothing', () => {
   fs.mkdirSync(addonDir(), { recursive: true });
   const file = path.join(root, 'bad.json');
   fs.writeFileSync(file, '{"title": "no steps"}');
-  const r = run(['plan', 'write', file]);
+  const r = run(['plan', 'write', path.basename(file)]);
   assert.equal(r.status, 1);
   assert.match(r.stderr, /steps/);
   assert.equal(fs.existsSync(path.join(addonDir(), 'ForeverLog_Plan.lua')), false);
   fs.writeFileSync(file, 'not json');
-  assert.equal(run(['plan', 'write', file]).status, 1);
+  assert.equal(run(['plan', 'write', path.basename(file)]).status, 1);
 });
 
 test('plan show prints the newest plan', () => {
@@ -173,7 +173,7 @@ test('plan show prints the newest plan', () => {
   fs.mkdirSync(addonDir(), { recursive: true });
   const file = path.join(root, 'plan.json');
   fs.writeFileSync(file, JSON.stringify(goodPlan));
-  run(['plan', 'write', file]);
+  run(['plan', 'write', path.basename(file)]);
   const r = run(['plan', 'show']);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /Razor Hill loop/);
@@ -199,7 +199,7 @@ test('review: plan write warns when the installed addon cannot load plans', () =
   fs.writeFileSync(path.join(addonDir(), 'ForeverLog.toc'), '## Interface: 16001\n## Version: 0.1.0\n\nCore.lua\n');
   const file = path.join(root, 'plan.json');
   fs.writeFileSync(file, JSON.stringify(goodPlan));
-  const r = run(['plan', 'write', file]);
+  const r = run(['plan', 'write', path.basename(file)]);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /wowf install-addon/);
 });
@@ -210,7 +210,7 @@ test('review: plan write leaves turn-in and talent nudges to the addon (it compu
   fs.mkdirSync(addonDir(), { recursive: true });
   const file = path.join(root, 'plan.json');
   fs.writeFileSync(file, JSON.stringify(goodPlan));
-  run(['plan', 'write', file]);
+  run(['plan', 'write', path.basename(file)]);
   const { ForeverLogPlan } = parseSavedVariables(fs.readFileSync(path.join(addonDir(), 'ForeverLog_Plan.lua'), 'utf8'));
   assert.ok(!ForeverLogPlan.nudges.some((n) => /talent point|Ready to turn in/.test(n)), JSON.stringify(ForeverLogPlan.nudges));
 });
@@ -556,7 +556,7 @@ test('gameplan write stores the plan for the main character and gameplan show pr
   run(['sync']);
   const file = path.join(root, 'gameplan.json');
   fs.writeFileSync(file, JSON.stringify(gamePlan));
-  const w = run(['gameplan', 'write', file]);
+  const w = run(['gameplan', 'write', path.basename(file)]);
   assert.equal(w.status, 0, w.stderr);
   assert.match(w.stdout, /Fury warrior, solo questing/);
   const saved = JSON.parse(fs.readFileSync(gamePlanPath(), 'utf8'));
@@ -659,3 +659,61 @@ test('state --json has gamePlan null without a plan', () => {
   init();
   assert.equal(JSON.parse(run(['state', '--json']).stdout).gamePlan, null);
 });
+
+// --- plan write / gameplan write read only JSON inside the working folder ---
+
+for (const [cmd, valid] of [['plan', () => goodPlan], ['gameplan', () => gamePlan]]) {
+  const written = () => fs.existsSync(cmd === 'plan' ? path.join(addonDir(), 'ForeverLog_Plan.lua') : gamePlanPath());
+  const setup = () => { init(); run(['sync']); fs.mkdirSync(addonDir(), { recursive: true }); };
+  const outside = () => { const f = path.join(root, 'elsewhere.json'); fs.writeFileSync(f, JSON.stringify(valid())); return f; };
+
+  test(`${cmd} write: a bare --json never reads a file path given after it`, () => {
+    setup();
+    const r = run([cmd, 'write', '--json', '--char', 'Testa-Grimtusk', outside()], { cwd: dataDir });
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /--json needs the .*JSON as its value/);
+    assert.equal(written(), false);
+  });
+
+  test(`${cmd} write: --json together with a file is refused`, () => {
+    setup();
+    fs.mkdirSync(path.join(dataDir, 'drafts'), { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'drafts', 'x.json'), JSON.stringify(valid()));
+    const r = run([cmd, 'write', 'drafts/x.json', '--json', JSON.stringify(valid())], { cwd: dataDir });
+    assert.equal(r.status, 1);
+    assert.equal(written(), false);
+  });
+
+  test(`${cmd} write: an absolute path is refused, even inside the working folder`, () => {
+    setup();
+    const r = run([cmd, 'write', outside()], { cwd: dataDir });
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /inside the current folder/);
+    const inside = path.join(dataDir, 'in.json');
+    fs.writeFileSync(inside, JSON.stringify(valid()));
+    assert.equal(run([cmd, 'write', inside], { cwd: dataDir }).status, 1);
+    for (const p of ['C:/x.json', 'C:x.json', '\\\\server\\share\\x.json']) assert.equal(run([cmd, 'write', p], { cwd: dataDir }).status, 1, p);
+    assert.equal(written(), false);
+  });
+
+  test(`${cmd} write: a link out of the working folder is refused`, { skip: process.platform === 'win32' && 'symlinks need admin rights' }, () => {
+    setup();
+    fs.mkdirSync(path.join(dataDir, 'drafts'), { recursive: true });
+    fs.symlinkSync(outside(), path.join(dataDir, 'drafts', 'link.json'));
+    const r = run([cmd, 'write', 'drafts/link.json'], { cwd: dataDir });
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /inside the current folder/);
+    assert.equal(written(), false);
+  });
+
+  test(`${cmd} write: drafts/<file>.json in the data folder and - still work`, () => {
+    setup();
+    fs.mkdirSync(path.join(dataDir, 'drafts'), { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'drafts', `${cmd}.json`), JSON.stringify(valid()));
+    const r = run([cmd, 'write', `drafts/${cmd}.json`], { cwd: dataDir });
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(written(), true);
+    const s = spawnSync(process.execPath, [BIN, cmd, 'write', '-'], { cwd: dataDir, encoding: 'utf8', input: JSON.stringify(valid()), env: { ...process.env, WOWF_CONFIG: cfgFile } });
+    assert.equal(s.status, 0, s.stderr);
+  });
+}
