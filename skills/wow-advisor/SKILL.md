@@ -20,8 +20,11 @@ does not do that.
 
 - Config: `~/.config/forever-companion/config.json` (`dataDir`, `gameDir`, `main`). You don't need
   to read it: the tools and `wowf` use it (in the overlay it is outside your readable folders).
-- Work from the data folder (`dataDir`). Its `CLAUDE.md` holds the player's goals, route and
-  preferences; read it first.
+- Work from the data folder (`dataDir`). Its `CLAUDE.md` holds "About me" (friends, schedule,
+  tone, anything else) and the player's own notes; read it first.
+- `gameplans/<realm>-<name>.json`: the character's game plan (goal, role and build, playstyle,
+  professions, milestones, avoid). Read it with `wow_gameplan` / `wowf gameplan show`, never
+  by hand; see "The game plan" below.
 - `knowledge/progress.md` in the data folder, if it exists: progress notes written from the
   overlay. Read it right after `CLAUDE.md`; where the two disagree, the newer dated note wins.
 - `characters/<realm>-<name>.json`: latest snapshot (level, XP, rested, money, zone, x/y,
@@ -40,6 +43,7 @@ does not do that.
 | Knowledge notes: list / show / save | `wow_knowledge` | `wowf knowledge list` / `show <slug>`; save with the Write tool to `knowledge/<slug>.md` |
 | Read a WoW web page | `wow_web_fetch` (allowlisted sites) | WebFetch / WebSearch |
 | Push a plan to the panel | `wow_plan_write` (`plan` object) | Write `drafts/plan.json`, then `wowf plan write drafts/plan.json` |
+| Game plan: show / save | `wow_gameplan` (`action`: `show` or `write`) | `wowf gameplan show` / Write `drafts/gameplan.json`, then `wowf gameplan write drafts/gameplan.json` |
 
 Use the tools when you have them; otherwise the `wowf` command (it may be on PATH as `wowf`).
 In Claude Code it lives at `"${CLAUDE_PLUGIN_ROOT}/bin/wowf"`; run it with `node`.
@@ -48,6 +52,7 @@ In Claude Code it lives at `"${CLAUDE_PLUGIN_ROOT}/bin/wowf"`; run it with `node
 ## Every answer
 
 1. Get fresh state first (`wow_state`, or `wowf state`; a pre-prompt hook usually synced already).
+   Note the `Game plan:` line and follow the plan (see "The game plan").
 2. State how old the data is ("as of 6 min ago"; live values carry their own age). Decide
    whether you need a `/fc sync` with "When to ask for `/fc sync`" below.
 3. When what is on screen matters (where am I standing, what am I fighting, what does this
@@ -60,6 +65,27 @@ In Claude Code it lives at `"${CLAUDE_PLUGIN_ROOT}/bin/wowf"`; run it with `node
 5. Reply chips are for overlay chats only: there, an answer may end with one `<choices>` block
    as the overlay's instructions describe. In a terminal chat (Claude Code or Pi) never write
    one; the player would see the raw markup.
+
+## The game plan
+
+Before each prompt the `Game plan:` line (from the Claude Code hook and `wowf sync`; before
+each turn in Pi) gives the plan's summary and the next milestone. For the whole plan run
+`wowf gameplan show` (Pi: `wow_gameplan` show).
+
+- Follow the plan in every answer: routes, quests, gear, talents and professions fit its
+  goal, role and build, playstyle and professions, and never suggest what its avoid list
+  rules out. Where the plan and "About me" disagree on goal, build, playstyle, professions or
+  milestones, the plan wins.
+- If a request conflicts with it (a different spec, a profession not in it, PvP while it says
+  to avoid PvP), say so in one line, answer what they asked, and offer to
+  update the plan in place. In the overlay offer it with chips, for example `Update my plan`
+  / `Keep the plan`; in a terminal ask plainly. When they agree, change the plan right there with the
+  `wow-gameplan` skill (show the change, confirm, save); no need to send them elsewhere.
+- No plan yet (no `Game plan:` line, `wowf gameplan show` says there is none): answer
+  normally. When the question is about goals or build ("what should my build be?"), offer to
+  set one up with the `wow-gameplan` skill.
+- Building a new plan or changing goals is the `wow-gameplan` skill's job: one question at
+  a time, a confirmed summary, then the save.
 
 ## Live state
 
@@ -149,8 +175,8 @@ When sources disagree or you are unsure, say which you used.
 - **Upgrades:** compare the item's stats against what is equipped in that slot using the
   class knowledge file's stat weights and armor/weapon rules; mention required level and
   weapon skill.
-- **Talents:** follow the plan in the data folder's `CLAUDE.md` if there is one; otherwise the
-  class knowledge file. Remind about unspent points.
+- **Talents:** follow the game plan's role and build (and any talent notes in the data
+  folder's `CLAUDE.md`); otherwise the class knowledge file. Remind about unspent points.
 - **Trainer:** class trainer every even level; weapon masters for new weapon skills.
 - **Professions:** current rank from `skills`, next recipe step and materials, what is
   already in the bags, where to gather on the current route.
