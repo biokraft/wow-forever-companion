@@ -34,9 +34,10 @@ export class PiClient extends EventEmitter {
   // start() appends the current one.
   // `resolve` finds how to start `command` without a shell (on Windows, Pi is an npm .cmd
   // shim, and its arguments include free text that must never reach a shell).
-  constructor({ command = 'pi', args = [], cwd, env, resolve = resolveTool } = {}) {
+  // `spawn` is injectable for tests.
+  constructor({ command = 'pi', args = [], cwd, env, resolve = resolveTool, spawn: spawnFn = spawn } = {}) {
     super();
-    this.opts = { command, args, cwd, env, resolve };
+    this.opts = { command, args, cwd, env, resolve, spawn: spawnFn };
     this.sessionId = null;
     // The model picked with setModel ("provider/id"); null = the one in the launch arguments.
     this.model = null;
@@ -66,7 +67,8 @@ export class PiClient extends EventEmitter {
     const base = this.model ? withModel(this.opts.args, this.model) : this.opts.args;
     const tool = this.opts.resolve(this.opts.command, { env: this.opts.env ?? process.env });
     const args = [...tool.args, ...base, ...sessionArgs(this.sessionId)];
-    const proc = spawn(tool.command, args, { cwd: this.opts.cwd, env: this.opts.env, stdio: ['pipe', 'pipe', 'pipe'] });
+    // windowsHide: the overlay has no console, so Windows would open one over the game.
+    const proc = this.opts.spawn(tool.command, args, { cwd: this.opts.cwd, env: this.opts.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     this.proc = proc;
     let buf = '';
     proc.stdout.setEncoding('utf8');

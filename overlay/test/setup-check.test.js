@@ -66,3 +66,11 @@ test('execCommand starts the resolved command (an npm shim on Windows) with the 
   assert.equal(r.code, 0);
   assert.equal(r.stdout.trim(), '--version|a b');
 });
+
+test('execCommand starts its process with windowsHide', async () => {
+  const { spawn } = await import('node:child_process');
+  const seen = [];
+  const resolve = () => ({ command: process.execPath, args: ['-e', ''] });
+  await execCommand('x', [], { resolve, spawn: (cmd, args, opts) => { seen.push(opts); return spawn(cmd, args, opts); } });
+  assert.equal(seen[0].windowsHide, true);
+});
