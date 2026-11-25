@@ -21,6 +21,15 @@
 - Sources in answers are links now instead of raw `[text](address)`; a click opens the page
   in your browser.
 - Point at an answer to copy it; a failed question offers **Try again**.
+- **Upgrade reminders for every class.** The companion now researches what your class can
+  wear and wield and how much each stat is worth, and saves it in your data folder
+  (`wowf classdata show`). The "upgrade in bags" reminder works from that, for any class;
+  before, only Warriors got it, from a file that shipped with the toolkit. Until the companion
+  has done that research for your class (ask it about an item), there is no such reminder.
+- **No shipped game notes any more.** The toolkit carried hand-written notes for one class
+  and four professions that never aged out. They are gone: the companion looks up what it
+  needs for your class and professions on the allowed WoW sites, saves dated notes in your
+  data folder and checks them again after 14 days. `wowf knowledge list` shows only your own.
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
 

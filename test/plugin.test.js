@@ -199,3 +199,18 @@ test('the data folder template leaves goals and build to the game plan', () => {
   assert.match(t, /Plan page/);
   assert.doesNotMatch(t, /Talent plan:/, 'the game plan holds the build');
 });
+
+test('the advisor skill tells the agent to research class data and save it through wowf', () => {
+  const skill = fs.readFileSync(new URL('../skills/wow-advisor/SKILL.md', import.meta.url), 'utf8');
+  assert.match(skill, /^## Class data$/m);
+  assert.match(skill, /wowf classdata write drafts\/classdata\.json/);
+  assert.match(skill, /Nothing\s+of it ships/);
+  assert.doesNotMatch(skill, /class knowledge file/);
+});
+
+test('the toolkit ships no game notes: every player\'s agent researches its own', () => {
+  assert.equal(fs.existsSync(new URL('../knowledge', import.meta.url)), false, 'no knowledge/ folder in the repository');
+  const skill = read('skills/wow-advisor/SKILL.md');
+  assert.match(skill, /Nothing ships with the toolkit/);
+  assert.doesNotMatch(skill, /shipped notes/);
+});

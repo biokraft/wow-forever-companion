@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const SCAN = ['src', 'bin', 'addon/ForeverLog', 'skills', '.claude-plugin', 'hooks', 'knowledge', 'package.json'];
+const SCAN = ['src', 'bin', 'addon/ForeverLog', 'skills', '.claude-plugin', 'hooks', 'package.json'];
 
 function files(p) {
   const full = path.join(root, p);

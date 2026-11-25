@@ -17,7 +17,8 @@ const MODELS = [
 // keeps file tools inside the working folders; --strict-mcp-config drops MCP servers; only
 // this repo's plugin loads. dontAsk denies anything not allowed below, without prompting.
 const SAFE_WOWF = ['sync', 'sync *', 'state', 'state *', 'quests *', 'npc *', 'plan show', 'plan show *', 'plan write --json *', 'plan write drafts/*',
-  'gameplan show', 'gameplan show *', 'gameplan write drafts/*', 'gameplan write --json *', 'knowledge *'];
+  'gameplan show', 'gameplan show *', 'gameplan write drafts/*', 'gameplan write --json *',
+  'classdata show', 'classdata show *', 'classdata write drafts/*', 'classdata write --json *', 'knowledge *'];
 // Free text (notes, plans) goes through files, never shell arguments: an apostrophe in
 // "Gar'Thok" would break the quoting. Writes are limited to two folders of the data folder.
 const WRITABLE = ['./knowledge/*.md', './drafts/*.json'];
@@ -60,7 +61,7 @@ export function claudeArgs({ model = 'sonnet', repo, sessionId, platform = proce
   const wowf = wowfCommand(repo, platform);
   const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose',
     '--include-partial-messages', '--model', model,
-    '--restricted', '--strict-mcp-config', '--plugin-dir', repo, '--add-dir', `${repo}/knowledge`,
+    '--restricted', '--strict-mcp-config', '--plugin-dir', repo,
     '--permission-mode', 'dontAsk',
     '--tools', 'Read,Glob,Grep,Bash,Skill,WebSearch,WebFetch,Write,Edit',
     '--allowedTools', 'Read', 'Glob', 'Grep', 'Skill', 'WebSearch', ...WEB_DOMAINS.map((d) => `WebFetch(domain:${d})`),
@@ -68,7 +69,7 @@ export function claudeArgs({ model = 'sonnet', repo, sessionId, platform = proce
     ...SAFE_WOWF.map((c) => `Bash(${wowf} ${c})`),
     '--disallowedTools', ...DENIED_WOWF.map((c) => `Bash(${wowf} ${c})`),
     ...NOT_WRITABLE.flatMap((p) => [`Write(${p})`, `Edit(${p})`]),
-    '--append-system-prompt', `Forever Companion overlay: run the toolkit CLI exactly as \`${wowf} <command>\` (allowed: sync, state, quests, npc, plan show, knowledge list|show, plan write drafts/plan.json, gameplan show, gameplan write drafts/gameplan.json). Save notes with the Write tool to knowledge/<slug>.md, plans to drafts/plan.json and the game plan to drafts/gameplan.json in the data folder; you cannot write anywhere else. Other shell commands are not available. ${ADVICE_RULES} ${CHOICES_RULES}`];
+    '--append-system-prompt', `Forever Companion overlay: run the toolkit CLI exactly as \`${wowf} <command>\` (allowed: sync, state, quests, npc, plan show, knowledge list|show, plan write drafts/plan.json, gameplan show, gameplan write drafts/gameplan.json, classdata show, classdata write drafts/classdata.json). Save notes with the Write tool to knowledge/<slug>.md, plans to drafts/plan.json, the game plan to drafts/gameplan.json and class data to drafts/classdata.json in the data folder; you cannot write anywhere else. Other shell commands are not available. ${ADVICE_RULES} ${CHOICES_RULES}`];
   // The last gate before the command line: anything that is not a UUID is left out.
   if (isSessionId(sessionId)) args.push('--resume', sessionId);
   return args;

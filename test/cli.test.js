@@ -353,10 +353,11 @@ test('review: plan write refuses paths that climb out and never echoes file cont
   assert.doesNotMatch(direct.stderr, /SECRET/);
 });
 
-test('review: knowledge list works without a config (shipped notes)', () => {
+test('review: knowledge list works without a config and is empty: nothing ships with the toolkit', () => {
   const r = run(['knowledge', 'list'], { env: { WOWF_CONFIG: path.join(root, 'none.json') } });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /forever-rules .*shipped/);
+  assert.match(r.stdout, /^No notes yet: nothing ships with the toolkit/);
+  assert.doesNotMatch(r.stdout, /shipped/);
 });
 
 test('review: init refuses the home folder as the data folder', () => {
@@ -726,3 +727,38 @@ for (const [cmd, valid] of [['plan', () => goodPlan], ['gameplan', () => gamePla
     assert.equal(s.status, 0, s.stderr);
   });
 }
+
+// --- Class data: researched per player, never shipped ---
+
+test('classdata write stores validated data for the character\'s class; state and show report it', () => {
+  init();
+  run(['sync']);
+  const cls = JSON.parse(run(['state', '--json']).stdout).classFile;
+  assert.match(run(['state']).stdout, new RegExp(`^Class data: none for ${cls} yet`, 'm'));
+  assert.match(run(['classdata', 'show']).stdout, /^Class data: none for/);
+  const today = new Date().toISOString().slice(0, 10);
+  const data = { classFile: cls, checked: today, sources: ['https://example.org/class'], armor: ['Cloth', 'Leather', 'Mail'], weapons: ['Two-Handed Axes'], statWeights: { ITEM_MOD_STRENGTH_SHORT: 1 }, dualWieldLevel: null };
+  fs.mkdirSync(path.join(root, 'drafts'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'drafts', 'classdata.json'), JSON.stringify(data));
+  const w = run(['classdata', 'write', 'drafts/classdata.json']);
+  assert.equal(w.status, 0, w.stderr);
+  assert.match(w.stdout, new RegExp(`Class data saved for ${cls} \\(checked ${today}\\)`));
+  assert.ok(fs.existsSync(path.join(dataDir, 'classdata', `${cls.toLowerCase()}.json`)));
+  const shown = run(['classdata', 'show']).stdout;
+  assert.match(shown, new RegExp(`^Class data for ${cls}`));
+  assert.match(shown, /Stat weights: ITEM_MOD_STRENGTH_SHORT 1/);
+  assert.match(run(['state']).stdout, new RegExp(`^Class data: ${cls}, checked ${today}\\.$`, 'm'));
+  assert.equal(JSON.parse(run(['classdata', 'show', '--json']).stdout).state, 'fresh');
+});
+
+test('classdata write refuses data for another class or without sources, and saves nothing', () => {
+  init();
+  run(['sync']);
+  const bad = run(['classdata', 'write', '--json', JSON.stringify({ classFile: 'NOTMINE', checked: '2026-11-25', sources: [], armor: [], weapons: [], statWeights: { armor: 1 } })]);
+  assert.equal(bad.status, 1, bad.stdout);
+  assert.match(bad.stderr, /nothing saved/);
+  assert.match(bad.stderr, /not a NOTMINE/);
+  assert.match(bad.stderr, /sources:/);
+  assert.equal(fs.existsSync(path.join(dataDir, 'classdata')), false);
+  assert.equal(run(['classdata']).status, 1);
+});

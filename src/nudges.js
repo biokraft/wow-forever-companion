@@ -1,5 +1,4 @@
 // Cheap, deterministic hints computed from a snapshot (no Claude needed).
-import fs from 'node:fs';
 
 const SLOTS = {
   INVTYPE_HEAD: [1], INVTYPE_NECK: [2], INVTYPE_SHOULDER: [3], INVTYPE_CHEST: [5], INVTYPE_ROBE: [5],
@@ -20,15 +19,6 @@ const WEAPON_SKILL = {
   Polearms: 'Polearms', Staves: 'Staves', Daggers: 'Daggers', 'Fist Weapons': 'Fist Weapons',
   Bows: 'Bows', Crossbows: 'Crossbows', Guns: 'Guns', Thrown: 'Thrown', Wands: 'Wands',
 };
-
-export function loadClassKnowledge(classFile) {
-  try {
-    const url = new URL(`../knowledge/classes/${String(classFile).toLowerCase()}.json`, import.meta.url);
-    return JSON.parse(fs.readFileSync(url, 'utf8'));
-  } catch {
-    return null;
-  }
-}
 
 export function itemScore(item, weights) {
   if (!item) return 0;
@@ -96,7 +86,9 @@ function bagUpgrades(s, k) {
   return out;
 }
 
-export function computeNudges(s, { classKnowledge, journal = [] } = {}) {
+// `classData` is the player's researched data for the character's class (classdata.js), or
+// null while there is none: then no bag-upgrade reminders.
+export function computeNudges(s, { classData, journal = [] } = {}) {
   const nudges = [];
   const unspent = s.talents?.unspent ?? 0;
   if (unspent > 0) {
@@ -111,7 +103,7 @@ export function computeNudges(s, { classKnowledge, journal = [] } = {}) {
     nudges.push({ kind: 'trainer_due', short: 'trainer due', text: `Level ${s.level}: new ranks to train at your class trainer` });
   }
 
-  if (classKnowledge) nudges.push(...bagUpgrades(s, classKnowledge));
+  if (classData) nudges.push(...bagUpgrades(s, classData));
 
   if ((s.bagSlotsTotal ?? 0) > 0 && (s.bagSlotsFree ?? 99) <= 2) {
     nudges.push({ kind: 'bags_full', short: 'bags full', text: `Only ${s.bagSlotsFree} bag slot(s) free` });
