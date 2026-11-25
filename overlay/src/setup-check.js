@@ -3,10 +3,11 @@ import { spawn } from 'node:child_process';
 import { resolveTool } from '../../src/tool-command.js';
 
 // `resolve` finds how to start the program without a shell (an npm .cmd shim on Windows).
-export function execCommand(cmd, args, { timeoutMs = 15000, resolve: resolveCmd = resolveTool } = {}) {
+// windowsHide: the overlay has no console, so Windows would open one over the game.
+export function execCommand(cmd, args, { timeoutMs = 15000, resolve: resolveCmd = resolveTool, spawn: spawnFn = spawn } = {}) {
   return new Promise((resolve, reject) => {
     const tool = resolveCmd(cmd);
-    const p = spawn(tool.command, [...tool.args, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const p = spawnFn(tool.command, [...tool.args, ...args], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     let stdout = '';
     p.stdout.on('data', (d) => { stdout += d; });
     p.stderr.on('data', (d) => { stdout += d; });

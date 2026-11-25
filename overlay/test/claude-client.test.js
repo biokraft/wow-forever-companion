@@ -320,3 +320,25 @@ test('compact() refuses while an answer is running', async () => {
   pending.catch(() => {});
   await assert.rejects(() => c.compact(), /still answering/);
 });
+
+test('the Claude process starts with windowsHide, so Windows opens no console over the game', async () => {
+  const { spawn } = await import('node:child_process');
+  const seen = [];
+  client = new ClaudeClient({ command: process.execPath, prefixArgs: [FAKE], cwd: os.tmpdir(), env: process.env, repo: '/repo',
+    spawn: (cmd, args, opts) => { seen.push(opts); return spawn(cmd, args, opts); } });
+  client.start();
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].windowsHide, true);
+});
+test('on Windows the wowf command uses forward slashes, so Git Bash does not eat the backslashes', () => {
+  const a = claudeArgs({ repo: 'D:\\Games\\wow-forever-companion\\', platform: 'win32' });
+  const allowed = a.slice(a.indexOf('--allowedTools') + 1, a.indexOf('--disallowedTools'));
+  assert.ok(allowed.includes('Bash(node D:/Games/wow-forever-companion/bin/wowf state)'));
+  const denied = a.slice(a.indexOf('--disallowedTools') + 1);
+  assert.ok(denied.includes('Bash(node D:/Games/wow-forever-companion/bin/wowf init *)'));
+  assert.match(a[a.indexOf('--append-system-prompt') + 1], /`node D:\/Games\/wow-forever-companion\/bin\/wowf <command>`/);
+  for (const x of a.filter((s) => s.includes('bin/wowf'))) assert.ok(!x.includes('\\'), x);
+  const spaced = claudeArgs({ repo: 'C:\\Program Files\\wow-forever-companion', platform: 'win32' });
+  assert.ok(spaced.includes('Bash(node "C:/Program Files/wow-forever-companion/bin/wowf" npc *)'));
+  assert.ok(claudeArgs({ repo: '/repo/', platform: 'darwin' }).includes('Bash(node /repo/bin/wowf state)'));
+});

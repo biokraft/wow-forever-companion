@@ -37,9 +37,18 @@ function sessionGone() {
   return Object.assign(new Error('Claude Code no longer has this conversation'), { code: 'session_gone' });
 }
 
-export function claudeArgs({ model = 'sonnet', repo, sessionId } = {}) {
-  const wowfPath = `${repo}/bin/wowf`;
-  const wowf = /\s/.test(wowfPath) ? `node "${wowfPath}"` : `node ${wowfPath}`;
+// The wowf command line goes into Bash permission rules and the system prompt. Claude Code
+// runs Bash through Git Bash on Windows, where backslashes are escapes, so on win32 the path
+// uses forward slashes (C:/...), which Node and Git Bash both accept.
+export function wowfCommand(repo, platform = process.platform) {
+  let dir = String(repo).replace(/[\\/]+$/, '');
+  if (platform === 'win32') dir = dir.replace(/\\/g, '/');
+  const wowfPath = `${dir}/bin/wowf`;
+  return /\s/.test(wowfPath) ? `node "${wowfPath}"` : `node ${wowfPath}`;
+}
+
+export function claudeArgs({ model = 'sonnet', repo, sessionId, platform = process.platform } = {}) {
+  const wowf = wowfCommand(repo, platform);
   const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose',
     '--include-partial-messages', '--model', model,
     '--restricted', '--strict-mcp-config', '--plugin-dir', repo, '--add-dir', `${repo}/knowledge`,
@@ -59,9 +68,10 @@ export function claudeArgs({ model = 'sonnet', repo, sessionId } = {}) {
 export class ClaudeClient extends EventEmitter {
   // `resolve` finds how to start `command` without a shell (on Windows, an npm install of
   // Claude Code is a .cmd shim; the system prompt argument must never reach a shell).
-  constructor({ command = 'claude', prefixArgs = [], cwd, env, model = 'sonnet', repo, resolve = resolveTool } = {}) {
+  // `spawn` is injectable for tests.
+  constructor({ command = 'claude', prefixArgs = [], cwd, env, model = 'sonnet', repo, resolve = resolveTool, spawn: spawnFn = spawn } = {}) {
     super();
-    this.opts = { command, prefixArgs, cwd, env, repo, resolve };
+    this.opts = { command, prefixArgs, cwd, env, repo, resolve, spawn: spawnFn };
     this.model = model;
     this.sessionId = null;
     this.proc = null;
@@ -84,7 +94,8 @@ export class ClaudeClient extends EventEmitter {
     if (this.proc) return;
     const tool = this.opts.resolve(this.opts.command, { env: this.opts.env ?? process.env });
     const args = [...tool.args, ...this.opts.prefixArgs, ...claudeArgs({ model: this.model, repo: this.opts.repo, sessionId: this.sessionId })];
-    const proc = spawn(tool.command, args, { cwd: this.opts.cwd, env: this.opts.env, stdio: ['pipe', 'pipe', 'pipe'] });
+    // windowsHide: the overlay has no console, so Windows would open one over the game.
+    const proc = this.opts.spawn(tool.command, args, { cwd: this.opts.cwd, env: this.opts.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     this.proc = proc;
     let buf = '';
     let stderr = ''; // the last STDERR_KEEP characters of this process's stderr
