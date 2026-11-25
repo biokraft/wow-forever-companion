@@ -22,7 +22,7 @@ function privatePatterns() {
 export const FORBIDDEN = [...GENERIC, ...privatePatterns()];
 
 // Private planning docs stay in the development repo; everything else tracked by git is public.
-const PRIVATE_PREFIXES = ['docs/superpowers/', 'scratch/', '.superpowers/'];
+const PRIVATE_PREFIXES = ['docs/superpowers/', 'docs/plans/', 'docs/specs/', 'scratch/', '.superpowers/'];
 
 export function publicFiles() {
   const tracked = execFileSync('git', ['-C', ROOT, 'ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean);

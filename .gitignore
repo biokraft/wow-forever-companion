@@ -6,3 +6,5 @@
 node_modules/
 /dist/
 /docs/superpowers/
+/docs/plans/
+/docs/specs/
