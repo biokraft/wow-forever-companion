@@ -11,6 +11,16 @@
 - **Reply chips.** When the companion asks a question with a few likely answers, it offers
   them as chips above the input: click one to answer, or tick several and click
   **Send these**. You can always type instead.
+- **Stop.** While the companion answers, a **Stop** button ends the answer. The chat keeps
+  what was written so far, and your next question goes on in the same conversation.
+- The chat window opens where you left it, at the size you gave it.
+- When another app holds the key that opens the chat, the chat says so and names the
+  setting to change; the round button's tooltip names the key you really use.
+- Commands the overlay asks you to run (on the "Almost there" page and in the new-version
+  notice) can be copied with a click.
+- Sources in answers are links now instead of raw `[text](address)`; a click opens the page
+  in your browser.
+- Point at an answer to copy it; a failed question offers **Try again**.
 - **Upgrade reminders for every class.** The companion now researches what your class can
   wear and wield and how much each stat is worth, and saves it in your data folder
   (`wowf classdata show`). The "upgrade in bags" reminder works from that, for any class;

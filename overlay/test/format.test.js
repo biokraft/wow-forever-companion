@@ -60,3 +60,31 @@ import { THINKING_HTML } from '../src/format.js';
 test('the thinking placeholder has a dots element and no inline style', () => {
   assert.equal(THINKING_HTML, '<span class="muted thinking">thinking<span class="dots" aria-hidden="true"></span></span>');
 });
+
+test('a markdown link to an https page becomes a link that shows its text', () => {
+  assert.equal(renderLite('See [Mining guide](https://warcraft.wiki.gg/wiki/Mining) first.'),
+    'See <a href="https://warcraft.wiki.gg/wiki/Mining" title="https://warcraft.wiki.gg/wiki/Mining">Mining guide</a> first.');
+});
+
+test('a link address keeps its underscores, stars and ampersands as they are', () => {
+  const html = renderLite('[a_b *c*](https://example.org/x_y_z?a=1&b=*2*)');
+  assert.equal(html, '<a href="https://example.org/x_y_z?a=1&amp;b=*2*" title="https://example.org/x_y_z?a=1&amp;b=*2*">a_b <em>c</em></a>');
+});
+
+test('only https links become links; anything else shows as written', () => {
+  for (const t of ['[x](http://example.org)', '[x](javascript:alert(1))', '[x](file:///etc/passwd)', '[x](https://)', '[x]( https://example.org)', '[x](https://exa"mple.org)']) {
+    assert.doesNotMatch(renderLite(t), /<a /, t);
+  }
+});
+
+test('a link cannot smuggle markup or a second attribute', () => {
+  const html = renderLite('[<b>x</b>](https://example.org/"onmouseover="x)');
+  assert.doesNotMatch(html, /<b>|onmouseover="x"/);
+  assert.doesNotMatch(html, /<a /);
+});
+
+test('links work inside lists and tables, and a half-streamed link shows as written', () => {
+  assert.match(renderMarkdown('- [Guide](https://example.org/g)'), /<li><a href="https:\/\/example\.org\/g"/);
+  assert.match(renderMarkdown('| Source |\n|---|\n| [Guide](https://example.org/g) |'), /<td><a href=/);
+  assert.equal(renderLite('[Guide](https://example.org/g'), '[Guide](https://example.org/g');
+});

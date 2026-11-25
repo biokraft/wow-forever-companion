@@ -35,6 +35,14 @@ const STDERR_KEEP = 2000;
 // An exit can arrive before the last stdout/stderr data; wait this long for the pipes to close.
 const CLOSE_GRACE_MS = 250;
 
+// How long a stop waits for the CLI to end the turn by itself before the process is ended.
+const STOP_GRACE_MS = 5000;
+
+// The answer the player stopped: `partial` is the text that had arrived by then.
+function stopped(run) {
+  return Object.assign(new Error('Stopped'), { code: 'stopped', partial: run.text });
+}
+
 function sessionGone() {
   return Object.assign(new Error('Claude Code no longer has this conversation'), { code: 'session_gone' });
 }
@@ -71,9 +79,9 @@ export class ClaudeClient extends EventEmitter {
   // `resolve` finds how to start `command` without a shell (on Windows, an npm install of
   // Claude Code is a .cmd shim; the system prompt argument must never reach a shell).
   // `spawn` is injectable for tests.
-  constructor({ command = 'claude', prefixArgs = [], cwd, env, model = 'sonnet', repo, resolve = resolveTool, spawn: spawnFn = spawn } = {}) {
+  constructor({ command = 'claude', prefixArgs = [], cwd, env, model = 'sonnet', repo, resolve = resolveTool, spawn: spawnFn = spawn, stopGraceMs = STOP_GRACE_MS } = {}) {
     super();
-    this.opts = { command, prefixArgs, cwd, env, repo, resolve, spawn: spawnFn };
+    this.opts = { command, prefixArgs, cwd, env, repo, resolve, spawn: spawnFn, stopGraceMs };
     // Sent with every message: a resumed chat remembers the toolkit path from when it started,
     // and after the toolkit moved (another folder, a re-clone) that old path is not allowed.
     this.toolkitHint = `[Run the toolkit exactly as \`${wowfCommand(repo)} <command>\`; command paths used earlier in this chat may no longer work.]`;
@@ -130,7 +138,13 @@ export class ClaudeClient extends EventEmitter {
     this.proc = null;
     let e = err ?? new Error(`Claude Code exited (code ${code})`);
     if (!err && stderr.includes(GONE)) { this.sessionId = null; e = sessionGone(); }
-    if (this.run) { const r = this.run; this.run = null; r.reject(e); this.emit('error', e); }
+    const r = this.run;
+    if (!r) return;
+    this.run = null;
+    // The player stopped this answer: the exit is how it ended, not a failure.
+    if (r.stopping) return r.reject(stopped(r));
+    r.reject(e);
+    this.emit('error', e);
   }
 
   #record(line, stderr) {
@@ -176,6 +190,7 @@ export class ClaudeClient extends EventEmitter {
         costUsd: rec.total_cost_usd,
       });
       if (gone) run.reject(sessionGone());
+      else if (run.stopping) run.reject(stopped(run));
       else if (rec.is_error) run.reject(new Error(rec.result || `Claude Code: ${rec.subtype}`));
       else run.resolve(run.text || rec.result || '');
     }
@@ -207,8 +222,19 @@ export class ClaudeClient extends EventEmitter {
     this.stop('stopped to switch model');
   }
 
+  /**
+   * Stops the answer that is running: its send() rejects with code 'stopped' and the text so
+   * far in `partial`. The CLI is asked to interrupt the turn (a control request on stdin, the
+   * same on every platform), which keeps the process and the conversation; a CLI that does
+   * not answer in time is ended, and the next question resumes the conversation.
+   */
   async abort() {
-    this.proc?.kill('SIGINT');
+    const run = this.run;
+    const proc = this.proc;
+    if (!run || !proc || run.stopping) return;
+    run.stopping = true;
+    proc.stdin.write(JSON.stringify({ type: 'control_request', request_id: `stop-${Date.now()}`, request: { subtype: 'interrupt' } }) + '\n');
+    setTimeout(() => { if (this.run === run && this.proc === proc) proc.kill(); }, this.opts.stopGraceMs).unref();
   }
 
   stop(reason = 'stopped') {

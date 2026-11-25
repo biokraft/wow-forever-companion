@@ -3,7 +3,7 @@
 // it cannot be resumed. Pure logic: files go through the chat store, the backend through the
 // client that getClient() returns. No Electron here.
 import { isSessionId } from './session-id.js';
-import { parseChoices } from './choices.js';
+import { parseChoices, visibleText } from './choices.js';
 import { isPlanChatId } from './chat-store.js';
 
 export const STALE_AFTER_SEC = 1800;
@@ -17,6 +17,8 @@ export const isCompactCommand = (text) => String(text ?? '').trim().toLowerCase(
 // never shown. The player's own message stays the plain words they clicked or typed.
 export const PLAN_PREFACE = '[This is the game plan page: use the wow-gameplan skill. Ask one question at a time, with reply chips where a few clear answers fit, and save the plan as the wow-gameplan skill says.]';
 export const REPLAY_NOTE = 'The companion re-read this chat from the saved messages; details it looked up earlier are gone.';
+
+export const STOPPED_NOTE = 'You stopped this answer.';
 
 const PREFACE_START = '[Earlier messages of this chat, for context:]';
 const PREFACE_END = '[End of earlier messages.]';
@@ -153,6 +155,7 @@ export function createChatSession({ store, getClient, backend, character, now = 
         answer = await client.send(build(), { images });
       }
     } catch (err) {
+      if (err?.code === 'stopped') return stoppedAnswer(target, client, err.partial);
       target.messages.push({ role: 'error', text: String(err?.message ?? err), at: now() });
       store.save(target);
       throw err;
@@ -175,6 +178,25 @@ export function createChatSession({ store, getClient, backend, character, now = 
     }
     store.save(target);
     return { answer, notes };
+  }
+
+  // The player stopped the answer: what had arrived is kept as the answer (without a chip
+  // block that was still arriving), with a note. The backend keeps the conversation, so the
+  // next question goes on from here.
+  function stoppedAnswer(target, client, partial) {
+    const answer = visibleText(String(partial ?? '')).replace(/\s+$/, '');
+    const notes = [...fresh, STOPPED_NOTE];
+    fresh = [];
+    if (answer) target.messages.push({ role: 'bot', text: answer, at: now() });
+    target.messages.push({ role: 'note', text: STOPPED_NOTE, at: now() });
+    target.backend = backend;
+    target.backendSessionId = client.sessionId ?? null;
+    if (target === chat) {
+      replay = false;
+      openedAt = null;
+    }
+    store.save(target);
+    return { answer, notes, stopped: true };
   }
 
   function remove(id) {

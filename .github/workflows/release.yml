@@ -10,27 +10,10 @@ permissions:
   contents: read
 
 jobs:
+  # The whole CI matrix (Linux, macOS, Windows; Node 22 and 24; privacy scan) on the tagged commit.
   test:
     name: Tests and privacy scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Core tests (CLI, sync, Questie reader, Pi package)
-        run: npm test
-      - name: Privacy scan (no personal data in tracked files)
-        run: node scripts/privacy-scan.js
-      - name: Overlay tests (no Electron needed)
-        run: node --test "overlay/test/*.test.js"
-      - uses: leafo/gh-actions-lua@v10
-        with:
-          luaVersion: 5.1.5 # the Lua version WoW runs
-      - name: Addon tests (Lua 5.1 with a stubbed WoW API)
-        run: lua addon/test/run.lua
+    uses: ./.github/workflows/ci.yml
 
   release:
     name: GitHub Release

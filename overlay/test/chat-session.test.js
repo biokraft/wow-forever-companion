@@ -10,6 +10,7 @@ import {
   REPLAY_MESSAGES,
   REPLAY_NOTE,
   PLAN_PREFACE,
+  STOPPED_NOTE,
 } from '../src/chat-session.js';
 
 const PREFACE_START = '[Earlier messages of this chat, for context:]';
@@ -580,4 +581,50 @@ test('a backend without a toolkit hint sends the message unchanged', async () =>
   const h = setup({ backend: 'pi' });
   await h.make().send('hello');
   assert.equal(h.client.sent[0].text, 'hello');
+});
+
+// ---- Stop: the player ended an answer that was still running ----
+
+function stoppedAt(partial) {
+  return Object.assign(new Error('Stopped'), { code: 'stopped', partial });
+}
+
+test('a stopped answer keeps the text so far and a note, and is no error', async () => {
+  const h = setup({ script: [stoppedAt('Go to Orgrimmar and')] });
+  const s = h.make();
+  const res = await s.send('Where do I train?');
+  assert.deepEqual(res, { answer: 'Go to Orgrimmar and', notes: [STOPPED_NOTE], stopped: true });
+  const saved = h.store.load(s.current().id);
+  assert.deepEqual(saved.messages.map((m) => [m.role, m.text]), [
+    ['user', 'Where do I train?'],
+    ['bot', 'Go to Orgrimmar and'],
+    ['note', STOPPED_NOTE],
+  ]);
+  assert.equal(saved.backendSessionId, madeId(1), 'the conversation goes on from here');
+});
+
+test('an answer stopped before any text leaves only the note', async () => {
+  const h = setup({ script: [stoppedAt('')] });
+  const s = h.make();
+  const res = await s.send('Where do I train?');
+  assert.deepEqual(res, { answer: '', notes: [STOPPED_NOTE], stopped: true });
+  assert.deepEqual(h.store.load(s.current().id).messages.map((m) => m.role), ['user', 'note']);
+});
+
+test('a chip block cut off by the stop is not saved or handed to the page', async () => {
+  const h = setup({ script: [stoppedAt('Pick one.\n<choices>\nFast questing')] });
+  const s = h.make();
+  const res = await s.send('What now?');
+  assert.equal(res.answer, 'Pick one.');
+  assert.equal(h.store.load(s.current().id).messages[1].text, 'Pick one.');
+});
+
+test('the question after a stopped one goes to the same conversation without a replay', async () => {
+  const h = setup({ script: [stoppedAt('Half'), 'Full answer.'] });
+  const s = h.make();
+  await s.send('q1');
+  const res = await s.send('q2');
+  assert.deepEqual(res, { answer: 'Full answer.', notes: [] });
+  assert.equal(h.client.sent[1].text, 'q2');
+  assert.deepEqual(h.client.opened, []);
 });

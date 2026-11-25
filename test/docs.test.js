@@ -17,7 +17,7 @@ test('README documents every wowf command', () => {
 });
 
 test('README documents every config key', () => {
-  for (const k of ['gameDir', 'dataDir', 'main', 'updateCheck', 'overlay.backend', 'overlay.model', 'overlay.claudeModel', 'overlay.hotkey', 'overlay.button', 'overlay.opacity']) {
+  for (const k of ['gameDir', 'dataDir', 'main', 'updateCheck', 'overlay.backend', 'overlay.model', 'overlay.claudeModel', 'overlay.hotkey', 'overlay.button', 'overlay.chat', 'overlay.opacity']) {
     assert.ok(readme().includes(k), k);
   }
 });

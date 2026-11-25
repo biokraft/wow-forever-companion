@@ -11,8 +11,8 @@ const FAKE = fileURLToPath(new URL('./fake-claude.js', import.meta.url));
 let client;
 afterEach(() => client?.stop());
 
-const make = (env = {}, model = 'sonnet') => {
-  client = new ClaudeClient({ command: process.execPath, prefixArgs: [FAKE], cwd: os.tmpdir(), env: { ...process.env, ...env }, model, repo: '/repo' });
+const make = (env = {}, model = 'sonnet', more = {}) => {
+  client = new ClaudeClient({ command: process.execPath, prefixArgs: [FAKE], cwd: os.tmpdir(), env: { ...process.env, ...env }, model, repo: '/repo', ...more });
   return client;
 };
 // Ids as the real CLI makes them (UUIDs); FAKE_SESSION is the one fake-claude reports.
@@ -360,4 +360,60 @@ test('the client offers a toolkit hint naming the exact allowed command path', a
   const c = new ClaudeClient({ repo: '/some/repo', spawn: () => { throw new Error('not started'); } });
   assert.ok(c.toolkitHint.includes(`${wowfCommand('/some/repo')} <command>`));
   assert.match(c.toolkitHint, /earlier in this chat/);
+});
+
+// ---- Stop: the player ends an answer that is still running ----
+
+test('abort() asks the CLI to interrupt and the answer ends as stopped, with the text so far', async () => {
+  const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fc-claude-')), 'log.jsonl');
+  const c = make({ FAKE_CLAUDE_SLOW: '1', FAKE_CLAUDE_LOG: log });
+  let text = '';
+  c.on('delta', (d) => { text += d; });
+  const pending = c.send('long question');
+  pending.catch(() => {});
+  await waitFor(() => text === 'Half an', 'the first part of the answer');
+  const proc = c.proc;
+  await c.abort();
+  await assert.rejects(pending, (e) => e.code === 'stopped' && e.partial === 'Half an');
+  assert.equal(c.proc, proc, 'the process keeps running for the next question');
+  assert.equal(c.run, null);
+  assert.equal(c.sessionId, FAKE_SESSION, 'the conversation is kept');
+  const interrupt = readLog(log).find((m) => m.type === 'control_request');
+  assert.equal(interrupt.request.subtype, 'interrupt');
+  assert.equal(typeof interrupt.request_id, 'string');
+});
+
+test('an exit after abort() is a stopped answer too, not a crash', async () => {
+  const c = make({ FAKE_CLAUDE_SLOW: 'exit' });
+  let text = '';
+  c.on('delta', (d) => { text += d; });
+  const errors = [];
+  c.on('error', (e) => errors.push(e));
+  const pending = c.send('long question');
+  pending.catch(() => {});
+  await waitFor(() => text === 'Half an', 'the first part of the answer');
+  await c.abort();
+  await assert.rejects(pending, (e) => e.code === 'stopped' && e.partial === 'Half an');
+  assert.deepEqual(errors, [], 'a stop the player asked for is not reported as an error');
+  assert.equal(c.sessionId, FAKE_SESSION);
+});
+
+test('abort() with no answer running does nothing', async () => {
+  const c = make();
+  await c.abort();
+  assert.equal(c.proc, null, 'no process was started for it');
+  assert.equal(await c.send('hi'), 'Hello');
+  await c.abort();
+  assert.equal(await c.send('hi again'), 'Hello');
+});
+
+test('a CLI that ignores the interrupt is ended after the grace time, and the answer is still stopped', async () => {
+  const c = make({ FAKE_CLAUDE_HANG: '1' }, 'sonnet', { stopGraceMs: 50 });
+  const pending = c.send('long question');
+  pending.catch(() => {});
+  await waitFor(() => c.sessionId === FAKE_SESSION, 'the answer to start');
+  await c.abort();
+  await assert.rejects(pending, (e) => e.code === 'stopped' && e.partial === '');
+  assert.equal(c.proc, null);
+  assert.equal(c.sessionId, FAKE_SESSION, 'the next question resumes the conversation');
 });

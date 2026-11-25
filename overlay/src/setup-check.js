@@ -1,4 +1,6 @@
 // Checks everything the overlay needs before chatting. Dependencies are injected for tests.
+// A problem is { code, text, command? }: `command` is the one line that fixes it, when there
+// is one the player can use as it stands (the page offers to copy it).
 import { spawn } from 'node:child_process';
 import { resolveTool } from '../../src/tool-command.js';
 
@@ -32,7 +34,7 @@ export async function checkSetup({ exec = execCommand, loadConfig, hasSnapshot, 
     pi = false;
   }
   if (!pi) {
-    problems.push({ code: 'no-pi', text: 'Pi is not installed. Install it from https://pi.dev (curl -fsSL https://pi.dev/install.sh | sh) or with npm install -g @earendil-works/pi-coding-agent.' });
+    problems.push({ code: 'no-pi', text: 'Pi is not installed. Install it from https://pi.dev (curl -fsSL https://pi.dev/install.sh | sh) or with npm install -g @earendil-works/pi-coding-agent.', command: 'npm install -g @earendil-works/pi-coding-agent' });
   } else {
     const models = await exec(piCommand, ['--list-models']).catch(() => ({ code: 1, stdout: '' }));
     if (models.code !== 0 || /No models available/i.test(models.stdout) || !models.stdout.trim()) {
@@ -47,13 +49,13 @@ function withData(problems, loadConfig, hasSnapshot) {
   try {
     cfg = loadConfig();
   } catch (e) {
-    problems.push({ code: 'bad-config', text: `The Forever Companion config file can't be read (${e.message}). Fix or delete it (~/.config/forever-companion/config.json; on Windows %APPDATA%\\forever-companion\\config.json), then in the wow-forever-companion folder run: node bin/wowf setup` });
+    problems.push({ code: 'bad-config', text: `The Forever Companion config file can't be read (${e.message}). Fix or delete it (~/.config/forever-companion/config.json; on Windows %APPDATA%\\forever-companion\\config.json), then in the wow-forever-companion folder run: node bin/wowf setup`, command: 'node bin/wowf setup' });
     return { ok: false, problems };
   }
   if (!cfg) {
-    problems.push({ code: 'no-config', text: 'Forever Companion is not set up. In a terminal, in the wow-forever-companion folder, run: node bin/wowf setup' });
+    problems.push({ code: 'no-config', text: 'Forever Companion is not set up. In a terminal, in the wow-forever-companion folder, run: node bin/wowf setup', command: 'node bin/wowf setup' });
   } else if (!hasSnapshot(cfg)) {
-    problems.push({ code: 'no-data', text: 'No character data yet. Log in to WoW and type /fc sync.' });
+    problems.push({ code: 'no-data', text: 'No character data yet. Log in to WoW and type /fc sync.', command: '/fc sync' });
   }
   return { ok: problems.length === 0, problems };
 }

@@ -272,6 +272,7 @@ written by `wowf setup`:
 | `overlay.claudeModel` | `"haiku"`, `"sonnet"`, or `"opus"` |
 | `overlay.hotkey` | default `"Alt+Space"` |
 | `overlay.button` | saved FC button position |
+| `overlay.chat` | saved place and size of the chat window |
 | `overlay.opacity` | chat window opacity, 0.4 to 1 (default 1; also a slider in the overlay) |
 
 ### The `wowf` command

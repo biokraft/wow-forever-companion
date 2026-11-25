@@ -44,10 +44,21 @@ function fromNudge(n, merged) {
   }
 }
 
-// The new-version notice. It has no question to ask (prompt null): clicking it sends nothing.
+// The new-version notice. It has no question to ask (prompt null): clicking it sends nothing
+// and copies `command` for the player's terminal.
 export function updateHint(update) {
   if (!update?.newer || typeof update.latest !== 'string') return [];
-  return [{ key: 'update', kind: 'update', label: `${update.latest} is out`, text: 'run: node bin/wowf update', prompt: null }];
+  return [{ key: 'update', kind: 'update', label: `${update.latest} is out`, text: 'run: node bin/wowf update', prompt: null, command: 'node bin/wowf update' }];
+}
+
+// The key that opens the chat could not be taken (`hotkey` is { key, ok } from the main
+// process): another app holds it. A notice like the update one: it sends nothing.
+export function hotkeyHint(hotkey) {
+  if (!hotkey || hotkey.ok !== false || typeof hotkey.key !== 'string') return [];
+  return [{
+    key: 'hotkey', kind: 'hotkey', label: `${hotkey.key} does not open the chat`,
+    text: 'another app uses that key; set "overlay.hotkey" in the config to another one, or click the round button', prompt: null,
+  }];
 }
 
 // While the character has no game plan (readCharacter sets gamePlan to null): a hint that opens
@@ -59,11 +70,11 @@ export function planHint(merged) {
 }
 
 /**
- * Hints in the order shown: the update notice first, then the game plan hint, then the nudges
- * by priority.
+ * Hints in the order shown: the update notice first, then the hotkey notice, the game plan
+ * hint, and the nudges by priority.
  */
-export function buildHints({ merged, synced, dismissed = new Set(), update } = {}) {
-  return [...updateHint(update), ...planHint(merged), ...nudgeHints({ merged, synced, dismissed })];
+export function buildHints({ merged, synced, dismissed = new Set(), update, hotkey } = {}) {
+  return [...updateHint(update), ...hotkeyHint(hotkey), ...planHint(merged), ...nudgeHints({ merged, synced, dismissed })];
 }
 
 function nudgeHints({ merged, synced, dismissed }) {

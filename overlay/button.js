@@ -24,3 +24,14 @@ window.addEventListener('mouseup', () => {
   if (wasDrag) window.fc.saveButton();
   else window.fc.toggle();
 });
+
+// The tooltip names the key that opens the chat, once main has taken it (none when another
+// app holds it). Asked again on hover: the key is only taken while WoW runs.
+async function nameHotkey() {
+  try {
+    const h = await window.fc.hotkey();
+    btn.title = h?.ok ? `Forever Companion: chat (${h.key})` : 'Forever Companion: chat';
+  } catch { /* the plain tooltip stays */ }
+}
+btn.addEventListener('mouseenter', nameHotkey);
+nameHotkey();

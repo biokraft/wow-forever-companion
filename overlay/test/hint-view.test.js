@@ -70,3 +70,10 @@ test('while choices are offered only the update notice stays next to them', () =
   const none = visibleHints({ live: [update, plan, ...live], starters: STARTERS, dismissed: new Set(), empty: false });
   assert.deepEqual(none.chips.map((h) => h.key), ['update', 'gameplan', 'k1', 'k2', 'k3']);
 });
+
+test('the hotkey notice is a row on the empty chat only, never a chip that cannot be closed', () => {
+  const hotkey = { key: 'hotkey', kind: 'hotkey', label: 'Alt+Space does not open the chat', text: 't', prompt: null };
+  const update = { key: 'update', kind: 'update', label: '0.4.1 is out', text: 't', prompt: null };
+  assert.deepEqual(visibleHints({ live: [update, hotkey], empty: true }).rows.map((h) => h.key), ['update', 'hotkey']);
+  assert.deepEqual(visibleHints({ live: [update, hotkey], empty: false }).chips.map((h) => h.key), ['update']);
+});

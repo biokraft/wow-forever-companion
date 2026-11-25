@@ -61,3 +61,31 @@ test('review: the chat opens left of the launcher button, not on top of it', () 
 test('review: renderer is sandboxed', () => {
   assert.equal(windowOptions().webPreferences.sandbox, true);
 });
+
+import { chatBounds } from '../src/window-options.js';
+
+const PRIMARY = { x: 0, y: 25, width: 2560, height: 1415 };
+const SECOND = { x: 2560, y: 0, width: 1920, height: 1080 };
+
+test('without a saved place the chat opens at its default spot and size', () => {
+  const def = { ...chatPosition(PRIMARY), width: 380, height: 520 };
+  assert.deepEqual(chatBounds(undefined, [PRIMARY]), def);
+  assert.deepEqual(chatBounds({ x: 'a', y: 1, width: 380, height: 520 }, [PRIMARY]), def, 'a damaged entry is ignored');
+  assert.deepEqual(chatBounds({ x: 10, y: 40, width: 380, height: Infinity }, [PRIMARY]), def);
+});
+
+test('a saved place and size come back as they were, on any screen', () => {
+  assert.deepEqual(chatBounds({ x: 100, y: 200, width: 500, height: 700 }, [PRIMARY, SECOND]), { x: 100, y: 200, width: 500, height: 700 });
+  assert.deepEqual(chatBounds({ x: 3000, y: 100, width: 420, height: 600 }, [PRIMARY, SECOND]), { x: 3000, y: 100, width: 420, height: 600 });
+});
+
+test('a place on a screen that is gone moves onto the first screen, fully visible', () => {
+  assert.deepEqual(chatBounds({ x: 3000, y: 100, width: 420, height: 600 }, [PRIMARY]), { x: 2140, y: 100, width: 420, height: 600 });
+  assert.deepEqual(chatBounds({ x: -900, y: -50, width: 420, height: 600 }, [PRIMARY]), { x: 0, y: 25, width: 420, height: 600 });
+});
+
+test('a saved size never exceeds the screen or drops below the smallest usable chat', () => {
+  assert.deepEqual(chatBounds({ x: 0, y: 25, width: 9000, height: 9000 }, [PRIMARY]), { x: 0, y: 25, width: 2560, height: 1415 });
+  const small = chatBounds({ x: 50, y: 60, width: 10, height: 36 }, [PRIMARY]);
+  assert.deepEqual([small.width, small.height], [300, 200], 'a collapsed height is never restored as the chat size');
+});
