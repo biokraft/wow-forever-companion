@@ -541,3 +541,121 @@ test('plain sync keeps the no-changes hint when live data is stale or broken', a
   assert.equal(r.stderr, '');
   assert.match(r.stdout, /No changes since the last sync/);
 });
+
+// --- Game plan ---
+
+const gamePlan = {
+  summary: 'Fury warrior, solo questing, Mining and Engineering',
+  goal: 'Reach 60 with steady questing',
+  milestones: [{ level: 10, text: 'Learn Defensive Stance' }, { text: 'Save gold for the mount' }],
+};
+const gamePlanPath = () => path.join(dataDir, 'gameplans', `${SLUG}.json`);
+
+test('gameplan write stores the plan for the main character and gameplan show prints it', () => {
+  init();
+  run(['sync']);
+  const file = path.join(root, 'gameplan.json');
+  fs.writeFileSync(file, JSON.stringify(gamePlan));
+  const w = run(['gameplan', 'write', file]);
+  assert.equal(w.status, 0, w.stderr);
+  assert.match(w.stdout, /Fury warrior, solo questing/);
+  const saved = JSON.parse(fs.readFileSync(gamePlanPath(), 'utf8'));
+  assert.equal(saved.version, 1);
+  assert.equal(typeof saved.updatedAt, 'number');
+  const s = run(['gameplan', 'show']);
+  assert.equal(s.status, 0, s.stderr);
+  assert.match(s.stdout, /Goal: Reach 60 with steady questing/);
+  assert.match(s.stdout, /L10: Learn Defensive Stance/);
+  const j = run(['gameplan', 'show', '--json']);
+  assert.equal(JSON.parse(j.stdout).summary, gamePlan.summary);
+});
+
+test('gameplan write takes --json inline and - from stdin', () => {
+  init();
+  run(['sync']);
+  assert.equal(run(['gameplan', 'write', '--json', JSON.stringify(gamePlan)]).status, 0);
+  const r = spawnSync(process.execPath, [BIN, 'gameplan', 'write', '-'], { cwd: root, encoding: 'utf8', input: JSON.stringify({ ...gamePlan, summary: 'From stdin' }), env: { ...process.env, WOWF_CONFIG: cfgFile } });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(JSON.parse(fs.readFileSync(gamePlanPath(), 'utf8')).summary, 'From stdin');
+});
+
+test('gameplan write with an invalid plan exits 1 with every reason and leaves the old plan byte-identical', () => {
+  init();
+  run(['sync']);
+  run(['gameplan', 'write', '--json', JSON.stringify(gamePlan)]);
+  const before = fs.readFileSync(gamePlanPath());
+  const r = run(['gameplan', 'write', '--json', JSON.stringify({ summary: 'x'.repeat(121), playstyle: Array(9).fill('solo') })]);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /summary: 121 characters, at most 120/);
+  assert.match(r.stderr, /goal: required/);
+  assert.match(r.stderr, /playstyle: 9 items, at most 8/);
+  assert.deepEqual(fs.readFileSync(gamePlanPath()), before);
+  assert.equal(run(['gameplan', 'write', '--json', 'not json']).status, 1);
+  assert.deepEqual(fs.readFileSync(gamePlanPath()), before);
+});
+
+test('gameplan write refuses paths that climb out', () => {
+  init();
+  run(['sync']);
+  const r = run(['gameplan', 'write', 'drafts/../../secret.json']);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /paths with \.\. are not allowed/);
+});
+
+test('gameplan show without a plan says so', () => {
+  init();
+  run(['sync']);
+  const r = run(['gameplan', 'show']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^No game plan yet/);
+  assert.equal(run(['gameplan', 'show', '--json']).stdout.trim(), 'null');
+});
+
+test('plan show ignores game plans (separate folders)', () => {
+  init();
+  run(['sync']);
+  run(['gameplan', 'write', '--json', JSON.stringify(gamePlan)]);
+  const r = run(['plan', 'show']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^No plan yet/);
+});
+
+test('sync --hook prints the game plan line on every prompt when a plan exists, and nothing without one', () => {
+  init();
+  run(['sync', '--hook'], { cwd: dataDir });
+  assert.equal(run(['sync', '--hook'], { cwd: dataDir }).stdout, '');
+  run(['gameplan', 'write', '--json', JSON.stringify(gamePlan)]);
+  for (let i = 0; i < 2; i++) {
+    const r = run(['sync', '--hook'], { cwd: dataDir });
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.stdout, `Forever Companion: Game plan: ${gamePlan.summary} · next: Learn Defensive Stance\n`);
+  }
+});
+
+test('sync --hook puts the game plan line after the live line, next milestone above the live level', async () => {
+  init();
+  ageSv();
+  run(['sync', '--hook'], { cwd: dataDir });
+  run(['gameplan', 'write', '--json', JSON.stringify(gamePlan)]);
+  await writeLive({ level: 12 });
+  const lines = run(['sync', '--hook'], { cwd: dataDir }).stdout.trim().split('\n');
+  assert.equal(lines.length, 2);
+  assert.match(lines[0], /^Forever Companion: Live: L12/);
+  assert.equal(lines[1], `Forever Companion: Game plan: ${gamePlan.summary} · next: Save gold for the mount`);
+});
+
+test('plain sync and state show the game plan', () => {
+  init();
+  run(['sync']);
+  run(['gameplan', 'write', '--json', JSON.stringify(gamePlan)]);
+  assert.match(run(['sync']).stdout, /^Game plan: Fury warrior/m);
+  const s = run(['state']);
+  assert.match(s.stdout, /Game plan: Fury warrior/);
+  assert.match(s.stdout, /Goal: Reach 60 with steady questing/);
+  assert.equal(JSON.parse(run(['state', '--json']).stdout).gamePlan.summary, gamePlan.summary);
+});
+
+test('state --json has gamePlan null without a plan', () => {
+  init();
+  assert.equal(JSON.parse(run(['state', '--json']).stdout).gamePlan, null);
+});

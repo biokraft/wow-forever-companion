@@ -83,11 +83,21 @@ test('claudeArgs is headless, streaming, isolated, and locked to read-only tools
   assert.deepEqual(allowed.filter((x) => x.startsWith('Bash(')), [
     'Bash(node /repo/bin/wowf sync)', 'Bash(node /repo/bin/wowf sync *)', 'Bash(node /repo/bin/wowf state)', 'Bash(node /repo/bin/wowf state *)', 'Bash(node /repo/bin/wowf quests *)',
     'Bash(node /repo/bin/wowf npc *)', 'Bash(node /repo/bin/wowf plan show)', 'Bash(node /repo/bin/wowf plan show *)',
-    'Bash(node /repo/bin/wowf plan write --json *)', 'Bash(node /repo/bin/wowf plan write drafts/*)', 'Bash(node /repo/bin/wowf knowledge *)',
+    'Bash(node /repo/bin/wowf plan write --json *)', 'Bash(node /repo/bin/wowf plan write drafts/*)',
+    'Bash(node /repo/bin/wowf gameplan show)', 'Bash(node /repo/bin/wowf gameplan show *)',
+    'Bash(node /repo/bin/wowf gameplan write drafts/*)', 'Bash(node /repo/bin/wowf gameplan write --json *)',
+    'Bash(node /repo/bin/wowf knowledge *)',
   ]);
   for (const bad of ['init', 'install-addon', 'overlay']) assert.ok(a.includes(`Bash(node /repo/bin/wowf ${bad} *)`), `deny ${bad}`);
   assert.ok(!a.some((x) => /^(Edit|Write)$/.test(x)), 'Write/Edit only path-scoped');
   assert.match(a[a.indexOf('--append-system-prompt') + 1], /node \/repo\/bin\/wowf/);
+});
+
+test('the prompt names the game plan commands and the draft file', () => {
+  const prompt = (a) => a[a.indexOf('--append-system-prompt') + 1];
+  const p = prompt(claudeArgs({ model: 'sonnet', repo: '/repo' }));
+  assert.match(p, /gameplan show/);
+  assert.match(p, /gameplan write drafts\/gameplan\.json/);
 });
 
 test('repo paths with spaces are quoted in the rules', () => {

@@ -30,6 +30,9 @@ const USAGE = `Usage: wowf <command> [options]
                                         researched notes cached in the data folder
   plan write <file | -> | --json '<plan>'  push a plan (JSON) to the in-game panel; /fc sync loads it
   plan show [--json]                    print the newest plan
+  gameplan write <file | -> | --json '<plan>' [--char Folder]
+                                        save the character's game plan (JSON); invalid plans are refused
+  gameplan show [--json] [--char Folder]  print the character's game plan
   overlay                               open the chat overlay (wowf setup installs it)
   overlay autostart on|off|status       start the overlay at login (macOS); it stays hidden until WoW runs
   install-addon [--link]                copy (or link) the ForeverLog addon into the game
@@ -37,8 +40,9 @@ const USAGE = `Usage: wowf <command> [options]
   doctor                                print a health report you can paste into a bug report`;
 
 import { enableAutostart, disableAutostart, autostartStatus } from './autostart.js';
-import { FcError, installedAddonOutdated, questsAvailable, questShow, npcSearch, writePlan, readCharacter } from './core.js';
+import { FcError, installedAddonOutdated, questsAvailable, questShow, npcSearch, writePlan, readCharacter, characterSlug } from './core.js';
 import { liveLine } from './live.js';
+import { writeGamePlan, readGamePlan, gamePlanLine, gamePlanText } from './gameplan.js';
 import { stateText } from '../pi/tools.js';
 import { listKnowledge, readKnowledge, writeKnowledge } from './knowledge.js';
 
@@ -63,6 +67,28 @@ function parseArgs(argv) {
 }
 
 const out = (s) => process.stdout.write(s.endsWith('\n') ? s : s + '\n');
+
+// JSON from a file, stdin (-) or --json '<inline>', for plan write and gameplan write.
+function readJsonInput(cmd, what, src, inline) {
+  if (src && src !== '-' && src.split(/[\\/]/).includes('..')) throw new UsageError(`${cmd}: paths with .. are not allowed`);
+  if (!src && !inline) throw new UsageError(`${cmd} needs a file path, - for stdin, or --json '<${what}>'`);
+  try {
+    return JSON.parse(inline ?? fs.readFileSync(src === '-' ? 0 : src, 'utf8'));
+  } catch (e) {
+    // Don't echo the parser's message: it quotes the file's contents.
+    throw new UsageError(e instanceof SyntaxError ? `could not read ${what} JSON: the file is not valid JSON` : `could not read ${what} JSON: ${e.code ?? 'read error'}`);
+  }
+}
+
+// The live line and the game plan line from one read of the character; [] on any error.
+function contextLines(cfg) {
+  try {
+    const { snapshot } = readCharacter(cfg, undefined, { questTitles: false });
+    return [liveLine(snapshot), gamePlanLine(snapshot.gamePlan, snapshot.level)].filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 
 function requireConfig() {
   const cfg = loadConfig();
@@ -177,9 +203,9 @@ const commands = {
         if (!cfg || realpathOrSelf(process.cwd()) !== realpathOrSelf(cfg.dataDir)) return 0;
         const summary = formatSummary(syncAll(cfg));
         if (summary) out(summary.split('\n').map((l) => `Forever Companion: ${l}`).join('\n'));
-        // Fresh live state from the overlay: one line on every prompt, none when stale.
-        const line = liveLine(readCharacter(cfg, undefined, { questTitles: false }).snapshot);
-        if (line) out(`Forever Companion: ${line}`);
+        // Fresh live state from the overlay (none when stale) and the game plan (when there is
+        // one): one line each on every prompt.
+        for (const line of contextLines(cfg)) out(`Forever Companion: ${line}`);
       } catch { /* stay silent */ }
       return 0;
     }
@@ -187,12 +213,18 @@ const commands = {
     const results = syncAll(cfg);
     if (opts.json) { out(JSON.stringify(results, null, 2)); return 0; }
     const summary = formatSummary(results);
-    // Fresh live state, as in the hook; any error counts as no live data.
+    // Fresh live state and the game plan, as in the hook; any error counts as neither.
     let live = null;
-    try { live = liveLine(readCharacter(cfg, undefined, { questTitles: false }).snapshot); } catch { /* no live line */ }
+    let plan = null;
+    try {
+      const { snapshot } = readCharacter(cfg, undefined, { questTitles: false });
+      live = liveLine(snapshot);
+      plan = gamePlanLine(snapshot.gamePlan, snapshot.level);
+    } catch { /* no live or plan line */ }
     if (summary) out(summary);
     if (live) out(live);
     else if (!summary && !opts.quiet) out('No changes since the last sync. In game, /fc sync saves fresh data.');
+    if (plan) out(plan);
     return results.some((r) => r.status === 'error') ? 1 : 0;
   },
 
@@ -259,17 +291,7 @@ const commands = {
     const plansDir = path.join(cfg.dataDir, 'plans');
     const sub = positional[1];
     if (sub === 'write') {
-      const src = positional[2];
-      if (src && src !== '-' && src.split(/[\\/]/).includes('..')) throw new UsageError('plan write: paths with .. are not allowed');
-      const inline = typeof opts.json === 'string' ? opts.json : null;
-      if (!src && !inline) throw new UsageError('plan write needs a file path, - for stdin, or --json \'<plan>\'');
-      let input;
-      try {
-        input = JSON.parse(inline ?? fs.readFileSync(src === '-' ? 0 : src, 'utf8'));
-      } catch (e) {
-        // Don't echo the parser's message: it quotes the file's contents.
-        throw new UsageError(e instanceof SyntaxError ? 'could not read plan JSON: the file is not valid JSON' : `could not read plan JSON: ${e.code ?? 'read error'}`);
-      }
+      const input = readJsonInput('plan write', 'plan', positional[2], typeof opts.json === 'string' ? opts.json : null);
       out(writePlan(cfg, input).lines.join('\n'));
       return 0;
     }
@@ -289,6 +311,25 @@ const commands = {
       return 0;
     }
     throw new UsageError('plan needs "write <file|->" or "show"');
+  },
+
+  // The character's game plan (gameplan.js), separate from the step plans above.
+  gameplan({ positional, opts }) {
+    const cfg = requireConfig();
+    const slug = characterSlug(cfg, typeof opts.char === 'string' ? opts.char : undefined);
+    const sub = positional[1];
+    if (sub === 'write') {
+      const input = readJsonInput('gameplan write', 'game plan', positional[2], typeof opts.json === 'string' ? opts.json : null);
+      out(`Game plan saved: ${writeGamePlan(cfg, slug, input).plan.summary}`);
+      return 0;
+    }
+    if (sub === 'show') {
+      const plan = readGamePlan(cfg, slug);
+      if (opts.json) { out(JSON.stringify(plan, null, 2)); return 0; }
+      out(plan ? gamePlanText(plan) : 'No game plan yet. Ask the companion to set one up, or save one with: wowf gameplan write <file>');
+      return 0;
+    }
+    throw new UsageError('gameplan needs "write <file|->" or "show"');
   },
 
   overlay({ positional }) {

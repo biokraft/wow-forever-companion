@@ -1,7 +1,8 @@
 // Pi tool implementations. They never throw: every failure becomes text the model can relay.
 import { fileURLToPath } from 'node:url';
 import { syncAll, formatSummary } from '../src/sync.js';
-import { readCharacter, questsAvailable, questShow, npcSearch, writePlan } from '../src/core.js';
+import { readCharacter, questsAvailable, questShow, npcSearch, writePlan, characterSlug } from '../src/core.js';
+import { writeGamePlan, readGamePlan, gamePlanLine, gamePlanText } from '../src/gameplan.js';
 import { listKnowledge, readKnowledge, writeKnowledge } from '../src/knowledge.js';
 import { livePlace } from '../src/live.js';
 import { USER_AGENT, createGate, looksBlocked } from './fetch-manners.js';
@@ -38,6 +39,7 @@ export function stateText(s, file, now = Math.floor(Date.now() / 1000)) {
   }
   const nudges = (s.nudges ?? []).map((n) => n.text);
   if (nudges.length) lines.push(`Nudges: ${nudges.join(' | ')}`);
+  if (s.gamePlan) lines.push(gamePlanLine(s.gamePlan, s.level), ...gamePlanText(s.gamePlan).split('\n').slice(1));
   const status = (q) => (q.leftLog ? ' (left the log: turned in or abandoned, confirmed at next sync)' : q.complete ? ' (ready to turn in)' : '');
   const quests = (s.quests ?? []).map((q) => `- ${q.title} #${q.id}${status(q)}${(q.objectives ?? []).length ? `: ${q.objectives.map((o) => o.text).join('; ')}` : ''}`);
   if (quests.length) lines.push('Quest log:', ...quests);
@@ -74,6 +76,17 @@ export function wowNpc({ cfg, name } = {}) {
 
 export function wowPlanWrite({ cfg, plan } = {}) {
   return guarded(() => (cfg ? reply(writePlan(cfg, plan).lines.join('\n')) : reply(NO_CONFIG)));
+}
+
+// The character's game plan: show it, or write one through the same validation as the CLI.
+export function wowGamePlan({ cfg, action, plan, character } = {}) {
+  return guarded(() => {
+    if (!cfg) return reply(NO_CONFIG);
+    const slug = characterSlug(cfg, character);
+    if (action === 'write') return reply(`Game plan saved: ${writeGamePlan(cfg, slug, plan).plan.summary}`);
+    const saved = readGamePlan(cfg, slug);
+    return reply(saved ? gamePlanText(saved) : 'No game plan yet. Ask the player a few questions, then save one with wow_gameplan write.');
+  });
 }
 
 export function syncSummary(cfg) {

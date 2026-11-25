@@ -10,6 +10,7 @@ import { validatePlan, resolveWaypoints, planToLua } from './plan.js';
 import { readLive, mergeLive } from './live.js';
 import { computeNudges, loadClassKnowledge } from './nudges.js';
 import { characterTag } from './bridge/codec.js';
+import { readGamePlan } from './gameplan.js';
 
 export class FcError extends Error {}
 
@@ -21,14 +22,13 @@ const PACKAGE_VERSION = JSON.parse(fs.readFileSync(new URL('../package.json', im
 // { questTitles: false } names quests picked up since the snapshot "Quest #id" instead of
 // looking them up: the first quest lookup reads the baked QuestieDB (~19 MB, about a second),
 // too slow for the per-prompt hook and the overlay status line, which print no titles.
+// The game plan (gameplan.js) rides along as snapshot.gamePlan: the plan, or null when there is
+// none or it is invalid.
 export function readCharacter(cfg, folder, { live = true, nowSec, questTitles = true } = {}) {
-  const who = folder ?? cfg.main;
-  let state = {};
-  try { state = JSON.parse(fs.readFileSync(path.join(cfg.dataDir, '.wowf', 'sync-state.json'), 'utf8')); } catch { /* none yet */ }
-  const slug = state[who]?.slug;
-  if (!slug) throw new FcError(`No synced data for ${who}. Log in, type /fc sync, then sync again.`);
+  const { who, slug, state } = syncedCharacter(cfg, folder);
   const file = path.join(cfg.dataDir, 'characters', `${slug}.json`);
   const snapshot = JSON.parse(fs.readFileSync(file, 'utf8'));
+  snapshot.gamePlan = readGamePlan(cfg, slug);
   if (!live) return { snapshot, file };
   const fresh = readLive(cfg, slug, { nowSec, savedMtimeMs: state[who].mtimeMs });
   if (!fresh || fresh.tag !== characterTag(String(snapshot.name ?? ''), String(snapshot.classFile ?? ''))) return { snapshot, file };
@@ -41,6 +41,18 @@ export function readCharacter(cfg, folder, { live = true, nowSec, questTitles = 
   merged.nudges = computeNudges(merged, { classKnowledge: loadClassKnowledge(merged.classFile), journal: readJournal(cfg, slug) });
   return { snapshot: merged, file };
 }
+
+function syncedCharacter(cfg, folder) {
+  const who = folder ?? cfg.main;
+  let state = {};
+  try { state = JSON.parse(fs.readFileSync(path.join(cfg.dataDir, '.wowf', 'sync-state.json'), 'utf8')); } catch { /* none yet */ }
+  const slug = state[who]?.slug;
+  if (!slug) throw new FcError(`No synced data for ${who}. Log in, type /fc sync, then sync again.`);
+  return { who, slug, state };
+}
+
+/** The data-file slug of the main (or given) character; throws FcError before its first sync. */
+export const characterSlug = (cfg, folder) => syncedCharacter(cfg, folder).slug;
 
 // The overlay reads the character every few seconds in one long-lived process, and the first
 // quest lookup parses the ~19 MB baked .toc (one to three seconds). Keep the opened db while the
