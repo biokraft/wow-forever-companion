@@ -53,9 +53,36 @@ function add(kind, text) {
   const div = document.createElement('div');
   div.className = `msg ${kind}`;
   div.innerHTML = render(text);
+  if (kind === 'bot' && text) {
+    div.dataset.raw = text;
+    addActions(div);
+  }
   messages.append(div);
   messages.scrollTop = messages.scrollHeight;
   return div;
+}
+
+// A finished answer gets a Copy button (shown on hover, top right) for its text as written.
+function addActions(bubble) {
+  if (!bubble.dataset.raw) return;
+  const box = document.createElement('div');
+  box.className = 'msg-actions';
+  box.append(copyButton(bubble.dataset.raw));
+  bubble.append(box);
+}
+
+// Under a failed question: asks it again with one click.
+function retryButton(text) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'copy retry';
+  b.textContent = 'Try again';
+  b.addEventListener('click', () => {
+    if (busy || switching || chatless) return;
+    b.remove();
+    ask(text);
+  });
+  return b;
 }
 
 async function refreshStatus() {
@@ -484,6 +511,7 @@ function settle(bubble, res) {
   const { text, choices } = parseChoices(s.action === 'fill' ? s.text : bubble.dataset.raw);
   bubble.dataset.raw = text;
   bubble.innerHTML = render(text); // drops the working line; render() escapes HTML first
+  addActions(bubble);
   if (res?.ok && !res.stopped && choices) {
     offered = choices;
     picked.clear();
@@ -517,11 +545,11 @@ async function ask(text) {
     settle(pending, res);
     if (res.note) add('note', res.note);
     for (const n of res.notes ?? []) add('note', n);
-    if (!res.ok) add('error', errorLine(res.error));
+    if (!res.ok) add('error', errorLine(res.error)).append(' ', retryButton(text));
   } catch (e) {
     // The call itself failed (no result from main): still say so.
     settle(pending, null);
-    add('error', errorLine(e?.message ?? e));
+    add('error', errorLine(e?.message ?? e)).append(' ', retryButton(text));
   } finally {
     // Even if the call itself rejects, the page must not stay stuck in "answering".
     clearInterval(ticker);

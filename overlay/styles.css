@@ -90,6 +90,11 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .msg.bot th { color: var(--gold); font-weight: 400; background: #1d150a; border-bottom-color: var(--bronze); }
 .msg.bot tbody tr:nth-child(even) td { background: rgba(255, 209, 0, 0.04); }
 .msg.bot blockquote { margin: 0 0 6px; padding-left: 8px; border-left: 2px solid var(--bronze); color: var(--muted); }
+/* Copy on a finished answer: top right, on the "Companion" line, only while pointed at */
+.msg.bot { position: relative; }
+.msg-actions { position: absolute; top: -1px; right: 0; visibility: hidden; }
+.msg.bot:hover .msg-actions, .msg-actions:focus-within { visibility: visible; }
+.msg .copy { font-style: normal; }
 .msg.note { color: var(--muted); font-size: 12px; font-style: italic; }
 .msg.error { color: #ff6060; }
 

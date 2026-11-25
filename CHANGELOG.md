@@ -20,6 +20,7 @@
   notice) can be copied with a click.
 - Sources in answers are links now instead of raw `[text](address)`; a click opens the page
   in your browser.
+- Point at an answer to copy it; a failed question offers **Try again**.
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
 
