@@ -22,17 +22,25 @@ const ROLE_FIELDS = ['spec', 'weapons', 'notes'];
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const length = (s) => [...s].length; // code points, as the player sees them
 
-// One text field: returns the trimmed text, or undefined (with an error when it is wrong).
-function text(value, name, max, errors, { required = false, oneLine = false } = {}) {
+// Control characters other than line breaks, tabs included: they garble the card and the
+// prompt lines.
+const CONTROL = /[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f]/;
+
+// One text field: returns the trimmed text, or undefined (with errors when it is wrong). Only
+// goal and notes may span lines: every other field can reach the one line put into every
+// prompt, or a one-line row on the card. All problems of a field are reported together.
+function text(value, name, max, errors, { required = false, multiline = false } = {}) {
   if (value === undefined || value === null || (typeof value === 'string' && !value.trim())) {
     if (required) errors.push(`${name}: required (non-empty text, at most ${max} characters)`);
     return undefined;
   }
   if (typeof value !== 'string') { errors.push(`${name}: must be text (at most ${max} characters)`); return undefined; }
-  const t = value.trim();
-  if (length(t) > max) { errors.push(`${name}: ${length(t)} characters, at most ${max}`); return undefined; }
-  if (oneLine && /[\r\n]/.test(t)) { errors.push(`${name}: must be one line`); return undefined; }
-  return t;
+  const t = multiline ? value.trim().replace(/\r\n/g, '\n') : value.trim();
+  const before = errors.length;
+  if (length(t) > max) errors.push(`${name}: ${length(t)} characters, at most ${max}`);
+  if (!multiline && /[\r\n]/.test(t)) errors.push(`${name}: must be one line (no line breaks)`);
+  if (CONTROL.test(t) || (multiline && /\r/.test(t))) errors.push(`${name}: contains control characters (tabs or similar); use plain text`);
+  return errors.length > before ? undefined : t;
 }
 
 function unknownKeys(obj, allowed, prefix, errors) {
@@ -63,8 +71,8 @@ export function validateGamePlan(input) {
   if (input.version !== undefined && input.version !== 1) errors.push('version: must be 1 (or left out)');
 
   const plan = { version: 1 };
-  plan.summary = text(input.summary, 'summary', L.summary, errors, { required: true, oneLine: true });
-  plan.goal = text(input.goal, 'goal', L.goal, errors, { required: true });
+  plan.summary = text(input.summary, 'summary', L.summary, errors, { required: true });
+  plan.goal = text(input.goal, 'goal', L.goal, errors, { required: true, multiline: true });
 
   if (input.role !== undefined && input.role !== null) {
     if (!isObject(input.role)) errors.push(`role: must be an object with ${ROLE_FIELDS.join(', ')}`);
@@ -101,7 +109,7 @@ export function validateGamePlan(input) {
     return v.level == null ? { text: t } : { level: v.level, text: t };
   });
   plan.avoid = list(input.avoid, 'avoid', L.avoid.items, errors, (v, n) => text(v, n, L.avoid.chars, errors, { required: true }));
-  plan.notes = text(input.notes, 'notes', L.notes, errors);
+  plan.notes = text(input.notes, 'notes', L.notes, errors, { multiline: true });
   if (typeof input.updatedAt === 'number' && Number.isFinite(input.updatedAt)) plan.updatedAt = input.updatedAt;
 
   if (errors.length) return { ok: false, errors };

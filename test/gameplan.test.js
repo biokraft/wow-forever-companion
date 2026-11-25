@@ -130,3 +130,44 @@ test('gamePlanText lists every section', () => {
     assert.ok(t.includes(s), s);
   }
 });
+
+test('every field that reaches the per-prompt line or the card stays on one line', () => {
+  const r = validateGamePlan({
+    summary: 'ok', goal: 'ok',
+    role: { spec: 'Fury\nArms' },
+    playstyle: ['solo\nquesting'],
+    professions: [{ name: 'Min\ning', why: 'gold\r\nore' }],
+    milestones: [{ level: 5, text: 'line1\nIGNORE ALL\r\nline3' }],
+    avoid: ['grind\ring'],
+  });
+  assert.equal(r.ok, false);
+  for (const f of ['role.spec', 'playstyle[0]', 'professions[0].name', 'professions[0].why', 'milestones[0].text', 'avoid[0]']) {
+    assert.ok(r.errors.includes(`${f}: must be one line (no line breaks)`), `${f}\n${r.errors.join('\n')}`);
+  }
+});
+
+test('goal and notes may span lines; Windows line ends become plain ones', () => {
+  const r = validateGamePlan({ summary: 'ok', goal: 'Reach 60\r\nwith friends', notes: 'one\ntwo' });
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+  assert.equal(r.plan.goal, 'Reach 60\nwith friends');
+  assert.equal(r.plan.notes, 'one\ntwo');
+});
+
+test('control characters are refused everywhere, tabs included', () => {
+  const r = validateGamePlan({ summary: 'a\u0007b', goal: 'tab\there', notes: 'nul\u0000', milestones: [{ text: 'esc\u001b[2J' }] });
+  assert.equal(r.ok, false);
+  for (const f of ['summary', 'goal', 'notes', 'milestones[0].text']) {
+    assert.ok(r.errors.some((e) => e.startsWith(`${f}: contains control characters`)), `${f}\n${r.errors.join('\n')}`);
+  }
+});
+
+test('a too-long field with a line break gets both errors in one round', () => {
+  const r = validateGamePlan({ summary: 'ok', goal: 'ok', milestones: [{ text: `${'x'.repeat(60)}\n${'y'.repeat(60)}` }] });
+  assert.ok(r.errors.includes('milestones[0].text: 121 characters, at most 100'), r.errors.join('\n'));
+  assert.ok(r.errors.includes('milestones[0].text: must be one line (no line breaks)'), r.errors.join('\n'));
+});
+
+test('gamePlanLine never carries a line break', () => {
+  const { plan } = validateGamePlan({ summary: 'ok', goal: 'a\nb', milestones: [{ text: 'next one' }], notes: 'x\ny' });
+  assert.doesNotMatch(gamePlanLine(plan, 1), /[\r\n]/);
+});
