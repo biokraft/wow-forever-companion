@@ -437,6 +437,15 @@ test('runCommand captures output and the exit code; a missing program is a non-z
   assert.notEqual(slow.code, 0);
 });
 
+test('runCommand on Windows starts Pi the way resolveTool finds it (an .exe works, not only pi.cmd)', async () => {
+  const asked = [];
+  const resolve = (name) => { asked.push(name); return { command: process.execPath, args: ['-e', 'console.log(process.argv.slice(1).join("|"))', '--'] }; };
+  const r = await runCommand('pi', ['--version'], { platform: 'win32', resolve });
+  assert.deepEqual(asked, ['pi']);
+  assert.equal(r.code, 0);
+  assert.equal(r.stdout.trim(), '--version');
+});
+
 test('wowf setup --yes --no-overlay from the command line, run twice', () => {
   const BIN = fileURLToPath(new URL('../bin/wowf', import.meta.url));
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'wowf setup ')));
