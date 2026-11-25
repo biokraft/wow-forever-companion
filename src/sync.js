@@ -5,7 +5,8 @@ import { execFileSync } from 'node:child_process';
 import { parseSavedVariables } from './lua/parse.js';
 import { listCharacters } from './detect.js';
 import { charSlug, firstName } from './slug.js';
-import { computeNudges, loadClassKnowledge } from './nudges.js';
+import { computeNudges } from './nudges.js';
+import { readClassData } from './classdata.js';
 
 const xpPct = (s) => (s.xpMax > 0 ? Math.floor((s.xp / s.xpMax) * 100) : 0);
 
@@ -26,8 +27,8 @@ function describeChanges(prev, snap) {
   return changes;
 }
 
-const defaultEnrich = (snapshot, journal) => ({
-  nudges: computeNudges(snapshot, { classKnowledge: loadClassKnowledge(snapshot.classFile), journal }),
+const defaultEnrich = (cfg) => (snapshot, journal) => ({
+  nudges: computeNudges(snapshot, { classData: readClassData(cfg, snapshot.classFile), journal }),
 });
 
 // WoW serialises a table with keys 1..n as a list, so slot-keyed tables can arrive as arrays.
@@ -116,7 +117,7 @@ function syncCharacter(ch, prevState, charDir, now, enrich) {
  * @param {{now?: number, enrich?: (snapshot: object, journal: object[]) => object}} opts
  *   enrich returns extra fields merged into the character JSON (used for nudges).
  */
-export function syncAll(cfg, { now = Math.floor(Date.now() / 1000), enrich = defaultEnrich } = {}) {
+export function syncAll(cfg, { now = Math.floor(Date.now() / 1000), enrich = defaultEnrich(cfg) } = {}) {
   const charDir = path.join(cfg.dataDir, 'characters');
   const stateFile = path.join(cfg.dataDir, '.wowf', 'sync-state.json');
   fs.mkdirSync(charDir, { recursive: true });

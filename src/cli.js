@@ -33,6 +33,10 @@ const USAGE = `Usage: wowf <command> [options]
   gameplan write <file | -> | --json '<plan>' [--char Folder]
                                         save the character's game plan (JSON); invalid plans are refused
   gameplan show [--json] [--char Folder]  print the character's game plan
+  classdata write <file | -> | --json '<data>' [--char Folder]
+                                        save researched data for the character's class (what it
+                                        wears and wields, stat weights); validated first
+  classdata show [--json] [--char Folder] print that data and how old it is
   overlay                               open the chat overlay (wowf setup installs it)
   overlay autostart on|off|status       start the overlay at login (macOS); it stays hidden until WoW runs
   install-addon [--link]                copy (or link) the ForeverLog addon into the game
@@ -43,6 +47,7 @@ import { enableAutostart, disableAutostart, autostartStatus } from './autostart.
 import { FcError, installedAddonOutdated, questsAvailable, questShow, npcSearch, writePlan, readCharacter, characterSlug } from './core.js';
 import { liveLine } from './live.js';
 import { writeGamePlan, readGamePlan, gamePlanLine, gamePlanText } from './gameplan.js';
+import { writeClassData, readClassData, classDataStatus, classDataLine, classDataText } from './classdata.js';
 import { stateText } from '../pi/tools.js';
 import { listKnowledge, readKnowledge, writeKnowledge } from './knowledge.js';
 
@@ -68,7 +73,7 @@ function parseArgs(argv) {
 
 const out = (s) => process.stdout.write(s.endsWith('\n') ? s : s + '\n');
 
-// JSON from a file, stdin (-) or --json '<inline>', for plan write and gameplan write. The
+// JSON from a file, stdin (-) or --json '<inline>', for plan write, gameplan write and classdata write. The
 // overlay's sandbox allows `<cmd> write --json *` and `<cmd> write drafts/*`, so neither may
 // reach a file outside the working folder (the data folder there): --json takes only an inline
 // value and never a path, and a path must be relative, without .., and must not resolve
@@ -355,6 +360,32 @@ const commands = {
       return 0;
     }
     throw new UsageError('gameplan needs "write <file|->" or "show"');
+  },
+
+  // Researched data for the character's class (classdata.js): the bag-upgrade reminder uses it.
+  classdata({ positional, opts }) {
+    const cfg = requireConfig();
+    const { snapshot } = readCharacter(cfg, typeof opts.char === 'string' ? opts.char : undefined, { live: false });
+    const cls = snapshot.classFile;
+    const sub = positional[1];
+    if (sub === 'write') {
+      const input = readJsonInput('classdata write', 'class data', positional[2], opts.json);
+      try {
+        const { data } = writeClassData(cfg, cls, input);
+        out(`Class data saved for ${data.classFile} (checked ${data.checked}).`);
+      } catch (e) {
+        throw new UsageError(e.message);
+      }
+      return 0;
+    }
+    if (sub === 'show') {
+      const data = readClassData(cfg, cls);
+      const status = classDataStatus(cfg, cls);
+      if (opts.json) { out(JSON.stringify({ ...status, data }, null, 2)); return 0; }
+      out(data ? `${classDataText(data)}\n${classDataLine(cls, status)}` : classDataLine(cls, status));
+      return 0;
+    }
+    throw new UsageError('classdata needs "write <file|->" or "show"');
   },
 
   overlay({ positional }) {

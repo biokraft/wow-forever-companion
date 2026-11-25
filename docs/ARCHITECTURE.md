@@ -52,6 +52,7 @@ reader.
   characters/<realm>-<name>.journal.jsonl history: level, quests, loot, gear, skills, deaths, zones
   characters/<realm>-<name>.live.json     live state from the pixel strip (gitignored, overwritten, never committed)
   plans/*.json             every plan pushed to the panel
+  classdata/<class>.json   what the class wears, wields and values, researched by the agent (written only through wowf classdata write)
   gameplans/<realm>-<name>.json  the character's game plan (written only through the same validation: wowf gameplan write or Pi's wow_gameplan)
   knowledge/*.md           researched notes: topic, sources, checked date, scope
   knowledge/progress.md    dated progress notes the overlay's agent keeps (level, zone, quests)

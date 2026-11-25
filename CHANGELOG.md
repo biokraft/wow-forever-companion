@@ -11,6 +11,11 @@
 - **Reply chips.** When the companion asks a question with a few likely answers, it offers
   them as chips above the input: click one to answer, or tick several and click
   **Send these**. You can always type instead.
+- **Upgrade reminders for every class.** The companion now researches what your class can
+  wear and wield and how much each stat is worth, and saves it in your data folder
+  (`wowf classdata show`). The "upgrade in bags" reminder works from that, for any class;
+  before, only Warriors got it, from a file that shipped with the toolkit. Until the companion
+  has done that research for your class (ask it about an item), there is no such reminder.
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
 

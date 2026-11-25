@@ -8,7 +8,8 @@ import { availableQuests, SKILL_NAMES } from './questie/available.js';
 import { npcPlace } from './questie/place.js';
 import { validatePlan, resolveWaypoints, planToLua } from './plan.js';
 import { readLive, mergeLive } from './live.js';
-import { computeNudges, loadClassKnowledge } from './nudges.js';
+import { computeNudges } from './nudges.js';
+import { readClassData, classDataStatus } from './classdata.js';
 import { characterTag } from './bridge/codec.js';
 import { readGamePlan } from './gameplan.js';
 
@@ -23,22 +24,28 @@ const PACKAGE_VERSION = JSON.parse(fs.readFileSync(new URL('../package.json', im
 // looking them up: the first quest lookup reads the baked QuestieDB (~19 MB, about a second),
 // too slow for the per-prompt hook and the overlay status line, which print no titles.
 // The game plan (gameplan.js) rides along as snapshot.gamePlan: the plan, or null when there is
-// none or it is invalid.
+// none or it is invalid. snapshot.classData says whether the class's researched data
+// (classdata.js) is there and how old: { state: 'none' | 'fresh' | 'stale', checked, ageDays }.
 export function readCharacter(cfg, folder, { live = true, nowSec, questTitles = true } = {}) {
   const { who, slug, state } = syncedCharacter(cfg, folder);
   const file = path.join(cfg.dataDir, 'characters', `${slug}.json`);
   const snapshot = JSON.parse(fs.readFileSync(file, 'utf8'));
   snapshot.gamePlan = readGamePlan(cfg, slug);
+  snapshot.classData = classDataStatus(cfg, snapshot.classFile);
   if (!live) return { snapshot, file };
   const fresh = readLive(cfg, slug, { nowSec, savedMtimeMs: state[who].mtimeMs });
-  if (!fresh || fresh.tag !== characterTag(String(snapshot.name ?? ''), String(snapshot.classFile ?? ''))) return { snapshot, file };
+  if (!fresh || fresh.tag !== characterTag(String(snapshot.name ?? ''), String(snapshot.classFile ?? ''))) {
+    // Class data saved since the last sync counts at once: the reminders are worked out again.
+    snapshot.nudges = computeNudges(snapshot, { classData: readClassData(cfg, snapshot.classFile), journal: readJournal(cfg, slug) });
+    return { snapshot, file };
+  }
   let db = null;
   try { db = cachedQuestieDb(cfg); } catch { /* names fall back */ }
   // An unreadable .toc names quests "Quest #id" and maps "map <id>"; a read never throws for it.
   const quiet = (fn) => (fn ? (v) => { try { return fn(v); } catch { return null; } } : undefined);
   const merged = mergeLive(snapshot, fresh, { questInfo: questTitles && db ? quiet((id) => db.quest(id)) : undefined, zoneName: quiet(db?.uiMapZoneName) });
   // Turn-ins and level-gated trainer visits follow the live values.
-  merged.nudges = computeNudges(merged, { classKnowledge: loadClassKnowledge(merged.classFile), journal: readJournal(cfg, slug) });
+  merged.nudges = computeNudges(merged, { classData: readClassData(cfg, merged.classFile), journal: readJournal(cfg, slug) });
   return { snapshot: merged, file };
 }
 

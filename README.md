@@ -293,6 +293,7 @@ On macOS you can put `bin/` on your PATH and type `wowf`.
 | `wowf knowledge list \| show <slug>` | shipped and cached research notes |
 | `wowf plan write <file>` / `wowf plan show` | push a plan to the in-game panel / show the newest |
 | `wowf gameplan write <file>` / `wowf gameplan show` | save your character's game plan / show it |
+| `wowf classdata write <file>` / `wowf classdata show` | save what the companion researched about your class (armor, weapons, stat weights) / show it |
 | `wowf overlay` | start the chat overlay |
 | `wowf overlay autostart on\|off\|status` | start the overlay at login (macOS) |
 | `wowf install-addon [--link]` | install (or link, for development) the addon |

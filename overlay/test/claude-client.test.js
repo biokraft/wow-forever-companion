@@ -86,6 +86,8 @@ test('claudeArgs is headless, streaming, isolated, and locked to read-only tools
     'Bash(node /repo/bin/wowf plan write --json *)', 'Bash(node /repo/bin/wowf plan write drafts/*)',
     'Bash(node /repo/bin/wowf gameplan show)', 'Bash(node /repo/bin/wowf gameplan show *)',
     'Bash(node /repo/bin/wowf gameplan write drafts/*)', 'Bash(node /repo/bin/wowf gameplan write --json *)',
+    'Bash(node /repo/bin/wowf classdata show)', 'Bash(node /repo/bin/wowf classdata show *)',
+    'Bash(node /repo/bin/wowf classdata write drafts/*)', 'Bash(node /repo/bin/wowf classdata write --json *)',
     'Bash(node /repo/bin/wowf knowledge *)',
   ]);
   for (const bad of ['init', 'install-addon', 'overlay']) assert.ok(a.includes(`Bash(node /repo/bin/wowf ${bad} *)`), `deny ${bad}`);

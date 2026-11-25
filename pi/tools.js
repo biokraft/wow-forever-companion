@@ -5,6 +5,7 @@ import { readCharacter, questsAvailable, questShow, npcSearch, writePlan, charac
 import { writeGamePlan, readGamePlan, gamePlanLine, gamePlanText } from '../src/gameplan.js';
 import { listKnowledge, readKnowledge, writeKnowledge } from '../src/knowledge.js';
 import { livePlace } from '../src/live.js';
+import { classDataLine } from '../src/classdata.js';
 import { USER_AGENT, createGate, looksBlocked } from './fetch-manners.js';
 
 const KNOWLEDGE_DIR = fileURLToPath(new URL('../knowledge/', import.meta.url));
@@ -39,6 +40,7 @@ export function stateText(s, file, now = Math.floor(Date.now() / 1000)) {
   }
   const nudges = (s.nudges ?? []).map((n) => n.text);
   if (nudges.length) lines.push(`Nudges: ${nudges.join(' | ')}`);
+  if (s.classData) lines.push(classDataLine(s.classFile, s.classData));
   if (s.gamePlan) lines.push(gamePlanLine(s.gamePlan, s.level), ...gamePlanText(s.gamePlan).split('\n').slice(1));
   const status = (q) => (q.leftLog ? ' (left the log: turned in or abandoned, confirmed at next sync)' : q.complete ? ' (ready to turn in)' : '');
   const quests = (s.quests ?? []).map((q) => `- ${q.title} #${q.id}${status(q)}${(q.objectives ?? []).length ? `: ${q.objectives.map((o) => o.text).join('; ')}` : ''}`);
