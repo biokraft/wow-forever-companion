@@ -320,3 +320,13 @@ test('compact() refuses while an answer is running', async () => {
   pending.catch(() => {});
   await assert.rejects(() => c.compact(), /still answering/);
 });
+
+test('the Claude process starts with windowsHide, so Windows opens no console over the game', async () => {
+  const { spawn } = await import('node:child_process');
+  const seen = [];
+  client = new ClaudeClient({ command: process.execPath, prefixArgs: [FAKE], cwd: os.tmpdir(), env: process.env, repo: '/repo',
+    spawn: (cmd, args, opts) => { seen.push(opts); return spawn(cmd, args, opts); } });
+  client.start();
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].windowsHide, true);
+});

@@ -233,3 +233,13 @@ test('compact() sends the compact command and refuses during an answer', async (
   await assert.rejects(() => c2.compact(), /still answering/);
   c2.stop();
 });
+
+test('the Pi process starts with windowsHide, so Windows opens no console over the game', async () => {
+  const { spawn } = await import('node:child_process');
+  const seen = [];
+  client = new PiClient({ command: process.execPath, args: [FAKE], cwd: os.tmpdir(), env: process.env,
+    spawn: (cmd, args, opts) => { seen.push(opts); return spawn(cmd, args, opts); } });
+  client.start();
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].windowsHide, true);
+});
