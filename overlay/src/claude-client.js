@@ -37,9 +37,18 @@ function sessionGone() {
   return Object.assign(new Error('Claude Code no longer has this conversation'), { code: 'session_gone' });
 }
 
-export function claudeArgs({ model = 'sonnet', repo, sessionId } = {}) {
-  const wowfPath = `${repo}/bin/wowf`;
-  const wowf = /\s/.test(wowfPath) ? `node "${wowfPath}"` : `node ${wowfPath}`;
+// The wowf command line goes into Bash permission rules and the system prompt. Claude Code
+// runs Bash through Git Bash on Windows, where backslashes are escapes, so on win32 the path
+// uses forward slashes (C:/...), which Node and Git Bash both accept.
+export function wowfCommand(repo, platform = process.platform) {
+  let dir = String(repo).replace(/[\\/]+$/, '');
+  if (platform === 'win32') dir = dir.replace(/\\/g, '/');
+  const wowfPath = `${dir}/bin/wowf`;
+  return /\s/.test(wowfPath) ? `node "${wowfPath}"` : `node ${wowfPath}`;
+}
+
+export function claudeArgs({ model = 'sonnet', repo, sessionId, platform = process.platform } = {}) {
+  const wowf = wowfCommand(repo, platform);
   const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose',
     '--include-partial-messages', '--model', model,
     '--restricted', '--strict-mcp-config', '--plugin-dir', repo, '--add-dir', `${repo}/knowledge`,
