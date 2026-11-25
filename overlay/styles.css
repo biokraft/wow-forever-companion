@@ -49,9 +49,14 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 #status { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--body); color: var(--muted); text-shadow: var(--outline); }
 #bar button { -webkit-app-region: no-drag; cursor: pointer; }
 /* Collapse: small bronze square; close: the round red WoW close button */
-#collapse { width: 18px; height: 18px; padding: 0; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 12px/14px var(--font); }
-#close { width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 1px solid #2a0a06; color: #ffd6c8; font: bold 12px/18px Arial, sans-serif; background: #9b1d10; box-shadow: 0 0 0 1px var(--bronze); }
+#collapse { width: 22px; height: 22px; padding: 0; flex: none; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 13px/18px var(--font); }
+#close { width: 22px; height: 22px; padding: 0; flex: none; border-radius: 50%; border: 1px solid #2a0a06; color: #ffd6c8; font: bold 13px/20px Arial, sans-serif; background: #9b1d10; box-shadow: 0 0 0 1px var(--bronze); }
 #collapse:hover, #close:hover { filter: brightness(1.25); }
+
+/* Keyboard focus: a gold ring on whatever Tab lands on (a mouse click shows none). The
+   question box keeps its gold border instead. */
+:focus-visible { outline: 1px solid var(--gold); outline-offset: 1px; }
+#input:focus-visible, #opacity:focus-visible { outline: none; }
 
 .muted { color: var(--muted); }
 .thinking .dots { display: inline-block; width: 3ch; text-align: left; }
@@ -105,11 +110,11 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .hint.starter .mark { color: var(--muted); }
 
 /* Header buttons for the saved chats: the same small bronze squares as collapse */
-#history, #newchat, #planbtn { width: 18px; height: 18px; padding: 0; flex: none; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 12px/14px var(--font); }
+#history, #newchat, #planbtn { width: 22px; height: 22px; padding: 0; flex: none; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 13px/18px var(--font); }
 #history:hover, #newchat:hover:not(:disabled), #planbtn:hover:not(:disabled) { filter: brightness(1.25); }
 #newchat:disabled, #planbtn:disabled { cursor: default; opacity: 0.5; }
 /* Plan: the same bronze square, as wide as its word; pressed while the plan page is open */
-#planbtn { width: auto; padding: 0 5px; }
+#planbtn { width: auto; padding: 0 6px; }
 #planbtn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
 
 /* Game plan card above the plan page's chat: layout only, the colours and type of the chat

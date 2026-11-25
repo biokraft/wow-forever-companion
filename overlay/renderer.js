@@ -589,7 +589,10 @@ $('report').addEventListener('click', () => window.fc.reportProblem());
 $('close').addEventListener('click', () => window.fc.hide());
 $('collapse').addEventListener('click', () => {
   const collapsed = document.body.classList.toggle('collapsed');
-  $('collapse').textContent = collapsed ? '+' : '–';
+  // Collapsed, the button opens the chat back up: a different sign than New chat's "+".
+  $('collapse').textContent = collapsed ? '▾' : '–';
+  $('collapse').title = collapsed ? 'Expand' : 'Collapse';
+  $('collapse').setAttribute('aria-label', $('collapse').title);
   if (collapsed) closeDrawer(); // not visible when collapsed: Esc must hide the window, not close it
   window.fc.collapse(collapsed);
 });
