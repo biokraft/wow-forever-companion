@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ClaudeClient, claudeArgs } from '../src/claude-client.js';
-import { ADVICE_RULES } from '../src/advice-rules.js';
+import { ADVICE_RULES, CHOICES_RULES } from '../src/advice-rules.js';
 
 const FAKE = fileURLToPath(new URL('./fake-claude.js', import.meta.url));
 let client;
@@ -83,11 +83,21 @@ test('claudeArgs is headless, streaming, isolated, and locked to read-only tools
   assert.deepEqual(allowed.filter((x) => x.startsWith('Bash(')), [
     'Bash(node /repo/bin/wowf sync)', 'Bash(node /repo/bin/wowf sync *)', 'Bash(node /repo/bin/wowf state)', 'Bash(node /repo/bin/wowf state *)', 'Bash(node /repo/bin/wowf quests *)',
     'Bash(node /repo/bin/wowf npc *)', 'Bash(node /repo/bin/wowf plan show)', 'Bash(node /repo/bin/wowf plan show *)',
-    'Bash(node /repo/bin/wowf plan write --json *)', 'Bash(node /repo/bin/wowf plan write drafts/*)', 'Bash(node /repo/bin/wowf knowledge *)',
+    'Bash(node /repo/bin/wowf plan write --json *)', 'Bash(node /repo/bin/wowf plan write drafts/*)',
+    'Bash(node /repo/bin/wowf gameplan show)', 'Bash(node /repo/bin/wowf gameplan show *)',
+    'Bash(node /repo/bin/wowf gameplan write drafts/*)', 'Bash(node /repo/bin/wowf gameplan write --json *)',
+    'Bash(node /repo/bin/wowf knowledge *)',
   ]);
   for (const bad of ['init', 'install-addon', 'overlay']) assert.ok(a.includes(`Bash(node /repo/bin/wowf ${bad} *)`), `deny ${bad}`);
   assert.ok(!a.some((x) => /^(Edit|Write)$/.test(x)), 'Write/Edit only path-scoped');
   assert.match(a[a.indexOf('--append-system-prompt') + 1], /node \/repo\/bin\/wowf/);
+});
+
+test('the prompt names the game plan commands and the draft file', () => {
+  const prompt = (a) => a[a.indexOf('--append-system-prompt') + 1];
+  const p = prompt(claudeArgs({ model: 'sonnet', repo: '/repo' }));
+  assert.match(p, /gameplan show/);
+  assert.match(p, /gameplan write drafts\/gameplan\.json/);
 });
 
 test('repo paths with spaces are quoted in the rules', () => {
@@ -290,6 +300,7 @@ test('the appended system prompt refuses live combat advice', () => {
   assert.equal(a.filter((x) => x === '--append-system-prompt').length, 1, 'one system prompt, not two');
   const prompt = a[a.indexOf('--append-system-prompt') + 1];
   assert.ok(prompt.includes(ADVICE_RULES));
+  assert.ok(prompt.includes(CHOICES_RULES), 'the reply chip rules go to Claude too');
   assert.match(prompt, /^Forever Companion overlay: run the toolkit CLI/, 'the toolkit instructions stay');
 });
 
@@ -341,4 +352,10 @@ test('on Windows the wowf command uses forward slashes, so Git Bash does not eat
   const spaced = claudeArgs({ repo: 'C:\\Program Files\\wow-forever-companion', platform: 'win32' });
   assert.ok(spaced.includes('Bash(node "C:/Program Files/wow-forever-companion/bin/wowf" npc *)'));
   assert.ok(claudeArgs({ repo: '/repo/', platform: 'darwin' }).includes('Bash(node /repo/bin/wowf state)'));
+});
+test('the client offers a toolkit hint naming the exact allowed command path', async () => {
+  const { ClaudeClient, wowfCommand } = await import('../src/claude-client.js');
+  const c = new ClaudeClient({ repo: '/some/repo', spawn: () => { throw new Error('not started'); } });
+  assert.ok(c.toolkitHint.includes(`${wowfCommand('/some/repo')} <command>`));
+  assert.match(c.toolkitHint, /earlier in this chat/);
 });

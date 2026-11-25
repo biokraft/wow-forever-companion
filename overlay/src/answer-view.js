@@ -25,6 +25,7 @@ const ACTIVITY = {
   wow_knowledge: 'Checking notes',
   wow_web_fetch: 'Researching',
   wow_plan_write: 'Writing your plan',
+  wow_gameplan: 'Saving your plan',
   Read: 'Reading your data',
   Glob: 'Reading your data',
   Grep: 'Reading your data',
@@ -52,4 +53,12 @@ const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', 
  */
 export function workingHtml(label, sec) {
   return `<p class="working"><span class="muted thinking">${escapeHtml(label)}<span class="dots" aria-hidden="true"></span> <span class="elapsed">${elapsedText(sec)}</span></span></p>`;
+}
+
+/**
+ * Whether a scroll box shows its end (within `slack` pixels). The chat stays pinned to the
+ * bottom while this holds, also when the area above the input grows (chips, hints).
+ */
+export function nearBottom({ scrollHeight, scrollTop, clientHeight }, slack = 32) {
+  return scrollHeight - scrollTop - clientHeight <= slack;
 }

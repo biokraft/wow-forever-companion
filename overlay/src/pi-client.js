@@ -3,11 +3,11 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { isSessionId } from './session-id.js';
-import { ADVICE_RULES } from './advice-rules.js';
+import { ADVICE_RULES, CHOICES_RULES } from './advice-rules.js';
 import { resolveTool } from '../../src/tool-command.js';
 
 // Read-only built-ins plus the Forever Companion tools; never bash, edit or write.
-export const OVERLAY_TOOLS = ['read', 'grep', 'find', 'ls', 'wow_state', 'wow_quests', 'wow_npc', 'wow_plan_write', 'wow_knowledge', 'wow_web_fetch'];
+export const OVERLAY_TOOLS = ['read', 'grep', 'find', 'ls', 'wow_state', 'wow_quests', 'wow_npc', 'wow_plan_write', 'wow_gameplan', 'wow_knowledge', 'wow_web_fetch'];
 
 // Pi keeps a session per working folder and id: the same id in the same folder continues it.
 // The last gate before the command line: anything that is not a UUID is left out.
@@ -16,7 +16,7 @@ const sessionArgs = (id) => (isSessionId(id) ? ['--session-id', id] : []);
 export function piArgs({ extensionPath, skillsPath, model, sessionId } = {}) {
   const args = ['--mode', 'rpc', '--no-approve', '--no-extensions', '--no-skills',
     '-e', extensionPath, '--skill', skillsPath, '--tools', OVERLAY_TOOLS.join(','),
-    '--append-system-prompt', ADVICE_RULES];
+    '--append-system-prompt', `${ADVICE_RULES} ${CHOICES_RULES}`];
   if (model) args.push('--model', model);
   args.push(...sessionArgs(sessionId));
   return args;

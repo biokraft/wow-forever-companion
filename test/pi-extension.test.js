@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { writeFakeQuestie } from './helpers/questie-fixture.js';
 import { syncAll } from '../src/sync.js';
-import { wowState, wowQuests, wowNpc, wowPlanWrite } from '../pi/tools.js';
+import { wowState, wowQuests, wowNpc, wowPlanWrite, wowGamePlan } from '../pi/tools.js';
 import extension from '../pi/extension.js';
 
 const FIXTURE = fs.readFileSync(new URL('./fixtures/sv/ForeverLog.lua', import.meta.url), 'utf8');
@@ -251,7 +251,7 @@ test('wow_knowledge saves progress notes without frontmatter and lists them as n
 test('extension registers the knowledge and web tools too', () => {
   const pi = fakePi();
   extension(pi, { loadConfig: () => cfg });
-  assert.deepEqual(pi.calls.tools.map((t) => t.name).sort(), ['wow_knowledge', 'wow_npc', 'wow_plan_write', 'wow_quests', 'wow_state', 'wow_web_fetch']);
+  assert.deepEqual(pi.calls.tools.map((t) => t.name).sort(), ['wow_gameplan', 'wow_knowledge', 'wow_npc', 'wow_plan_write', 'wow_quests', 'wow_state', 'wow_web_fetch']);
 });
 
 const page = (status, headers = {}, body = '<p>ok</p>') => ({
@@ -313,4 +313,52 @@ test('wowState without live data keeps the snapshot zone', async () => {
   const t = text(await wowState({ cfg }));
   assert.match(t, /· Razor Hill \(Durotar\)/);
   assert.doesNotMatch(t, /\(live\)|left the log/);
+});
+
+// --- Game plan ---
+
+const gamePlan = { summary: 'Fury warrior, solo questing', goal: 'Reach 60', milestones: [{ level: 10, text: 'Learn Defensive Stance' }] };
+
+test('wow_gameplan writes through the same validation and shows the plan', async () => {
+  syncAll(cfg);
+  assert.match(text(await wowGamePlan({ cfg, action: 'show' })), /No game plan yet/);
+  const bad = await wowGamePlan({ cfg, action: 'write', plan: { summary: 'x'.repeat(121) } });
+  assert.equal(bad.details.error, true);
+  assert.match(text(bad), /summary: 121 characters, at most 120/);
+  assert.match(text(bad), /goal: required/);
+  assert.match(text(await wowGamePlan({ cfg, action: 'write', plan: gamePlan })), /Fury warrior, solo questing/);
+  assert.ok(fs.existsSync(path.join(cfg.dataDir, 'gameplans', 'testrealm-testa-grimtusk.json')));
+  assert.match(text(await wowGamePlan({ cfg, action: 'show' })), /Goal: Reach 60/);
+  assert.match(text(await wowGamePlan({ cfg: null, action: 'show' })), /node bin\/wowf setup/);
+});
+
+test('wow_state text includes the game plan', async () => {
+  syncAll(cfg);
+  await wowGamePlan({ cfg, action: 'write', plan: gamePlan });
+  const t = text(await wowState({ cfg }));
+  assert.match(t, /Game plan: Fury warrior, solo questing · next: Learn Defensive Stance/);
+  assert.match(t, /Goal: Reach 60/);
+});
+
+test('the per-turn message carries the game plan line on every user turn, also with nothing new to sync', async () => {
+  const pi = fakePi();
+  extension(pi, { loadConfig: () => cfg });
+  const hook = pi.calls.handlers.before_agent_start;
+  assert.doesNotMatch((await hook({ messageType: 'user' })).message.content, /Game plan:/, 'no plan, no line');
+  assert.equal(await hook({ messageType: 'user' }), undefined);
+  await wowGamePlan({ cfg, action: 'write', plan: gamePlan });
+  for (let i = 0; i < 2; i++) {
+    const r = await hook({ messageType: 'user' });
+    assert.equal(r?.message.content, 'Forever Companion: Game plan: Fury warrior, solo questing · next: Learn Defensive Stance', `turn ${i + 1}`);
+  }
+});
+
+test('the wow_gameplan tool takes an action and a plan object', async () => {
+  const pi = fakePi();
+  extension(pi, { loadConfig: () => cfg });
+  syncAll(cfg);
+  const tool = pi.calls.tools.find((t) => t.name === 'wow_gameplan');
+  assert.deepEqual(tool.parameters.properties.action.enum, ['show', 'write']);
+  assert.equal(tool.parameters.properties.plan.type, 'object');
+  assert.match(text(await tool.execute('id', { action: 'write', plan: gamePlan })), /Fury warrior/);
 });

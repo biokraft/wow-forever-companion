@@ -1,4 +1,7 @@
-// What the main process answers the page with for hints and saved chats. Pure: everything it
+import { cleanFolds } from './plan-page.js';
+import { planChatId } from './chat-store.js';
+
+// What the main process answers the page with for hints, saved chats and the game plan page. Pure: everything it
 // reads comes in as a parameter, so the cases without a config are tested without Electron.
 
 /**
@@ -59,4 +62,35 @@ export async function exclusiveSend(state, run) {
   } finally {
     state.answering = false;
   }
+}
+
+/**
+ * The game plan page's data: { hasSnapshot, planChat, plan, level, introSeen, folds }.
+ * `planChat` is false when the character's name gives no plan chat id (slug "realm-"). `plan` is the
+ * validated plan or null, `level` the live level, `introSeen` the first-use flag of this
+ * character, `folds` the saved fold state. Without a config or a readable character:
+ * hasSnapshot false and no plan.
+ */
+export function gamePlanData({ safeConfig, readCharacter, characterSlug }) {
+  const cfg = safeConfig();
+  const folds = cleanFolds(cfg?.overlay?.planFolds);
+  const none = { hasSnapshot: false, planChat: false, plan: null, level: null, introSeen: false, folds };
+  if (!cfg) return none;
+  let slug;
+  let snapshot;
+  try {
+    slug = characterSlug(cfg);
+    snapshot = readCharacter(cfg, undefined, { questTitles: false }).snapshot;
+  } catch {
+    return none;
+  }
+  const planChat = planChatId(slug) !== null;
+  return {
+    hasSnapshot: true,
+    planChat,
+    plan: snapshot?.gamePlan ?? null,
+    level: Number.isFinite(snapshot?.level) ? snapshot.level : null,
+    introSeen: planChat && cfg.overlay?.planIntroSeen?.[slug] === true,
+    folds,
+  };
 }

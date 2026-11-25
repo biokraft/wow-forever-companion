@@ -3,6 +3,8 @@
 // it cannot be resumed. Pure logic: files go through the chat store, the backend through the
 // client that getClient() returns. No Electron here.
 import { isSessionId } from './session-id.js';
+import { parseChoices } from './choices.js';
+import { isPlanChatId } from './chat-store.js';
 
 export const STALE_AFTER_SEC = 1800;
 export const REPLAY_MESSAGES = 30;
@@ -11,6 +13,9 @@ export const COMPACT_NOTE = 'Earlier messages summarised: the companion now work
 /** True for the bare `/compact` command typed into the chat. */
 export const isCompactCommand = (text) => String(text ?? '').trim().toLowerCase() === '/compact';
 
+// Sent ahead of every turn in the game plan page's chat, to the backend only: never saved,
+// never shown. The player's own message stays the plain words they clicked or typed.
+export const PLAN_PREFACE = '[This is the game plan page: use the wow-gameplan skill. Ask one question at a time, with reply chips where a few clear answers fit, and save the plan as the wow-gameplan skill says.]';
 export const REPLAY_NOTE = 'The companion re-read this chat from the saved messages; details it looked up earlier are gone.';
 
 const PREFACE_START = '[Earlier messages of this chat, for context:]';
@@ -98,6 +103,19 @@ export function createChatSession({ store, getClient, backend, character, now = 
     return chat;
   }
 
+  // The game plan page's chat (id from planChatId): reopened like any saved chat (resume or
+  // replay), or started under that id when it has no file yet. Already open: nothing switches.
+  function openPlan(id) {
+    if (!isPlanChatId(id)) return null;
+    if (chat.id === id) return chat;
+    if (store.load(id)) return open(id);
+    getClient().openSession(null);
+    chat = { ...store.newChat({ character, backend }), id, title: 'Game plan' };
+    replay = false;
+    openedAt = null;
+    return chat;
+  }
+
   function openLatest({ maxAgeSec = 43200 } = {}) {
     const [newest] = store.list({ character });
     if (newest && now() - newest.updatedAt <= maxAgeSec) {
@@ -112,7 +130,7 @@ export function createChatSession({ store, getClient, backend, character, now = 
     const client = getClient();
     const earlier = target.messages.slice();
     fresh = [];
-    if (earlier.length === 0) target.title = store.titleFrom(text);
+    if (earlier.length === 0 && !isPlanChatId(target.id)) target.title = store.titleFrom(text);
     target.messages.push({ role: 'user', text, at: now() });
     store.save(target);
 
@@ -121,7 +139,7 @@ export function createChatSession({ store, getClient, backend, character, now = 
     let preface = '';
     const build = () => {
       preface = replay ? replayPreface(earlier) : '';
-      return [preface, stale, text].filter(Boolean).join('\n\n');
+      return [preface, stale, client.toolkitHint ?? '', isPlanChatId(target.id) ? PLAN_PREFACE : '', text].filter(Boolean).join('\n\n');
     };
 
     let answer;
@@ -142,7 +160,9 @@ export function createChatSession({ store, getClient, backend, character, now = 
 
     const notes = fresh;
     fresh = [];
-    target.messages.push({ role: 'bot', text: answer, at: now() });
+    // Reply chips belong to the moment they were offered: the saved text has no block, so a
+    // reopened chat shows none. The page still gets the whole answer to draw them.
+    target.messages.push({ role: 'bot', text: parseChoices(answer).text, at: now() });
     if (preface) {
       target.messages.push({ role: 'note', text: REPLAY_NOTE, at: now() });
       notes.push(REPLAY_NOTE);
@@ -168,5 +188,5 @@ export function createChatSession({ store, getClient, backend, character, now = 
     return { openChanged: true };
   }
 
-  return { current, startNew, open, openLatest, send, remove, compact, noteCompacted };
+  return { current, startNew, open, openPlan, openLatest, send, remove, compact, noteCompacted };
 }

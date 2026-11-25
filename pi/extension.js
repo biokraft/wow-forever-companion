@@ -5,9 +5,10 @@
 // tool parameters accept plain JSON Schema; before_agent_start may return a message that is
 // stored in the session and sent to the model.
 import { loadConfig as defaultLoadConfig } from '../src/config.js';
-import { wowState, wowQuests, wowNpc, wowPlanWrite, wowKnowledge, wowWebFetch, syncSummary } from './tools.js';
+import { wowState, wowQuests, wowNpc, wowPlanWrite, wowGamePlan, wowKnowledge, wowWebFetch, syncSummary } from './tools.js';
 import { readCharacter } from '../src/core.js';
 import { liveLine } from '../src/live.js';
+import { gamePlanLine } from '../src/gameplan.js';
 
 const obj = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 
@@ -41,6 +42,12 @@ export default function foreverCompanion(pi, { loadConfig = defaultLoadConfig } 
   tool('wow_plan_write', 'Push plan', 'Push a plan (title, 3-6 steps with optional done condition and waypoint) to the in-game Forever Companion panel.',
     obj({ plan: { type: 'object', description: 'Plan JSON as described in the wow-advisor skill' } }, ['plan']),
     (c, p) => wowPlanWrite({ cfg: c, plan: p.plan }));
+  tool('wow_gameplan', 'WoW game plan', 'Show the character\'s game plan (action "show") or save a new one (action "write" with plan: summary ≤ 120 chars and goal required; optional role {spec, weapons, notes}, playstyle [≤ 8], professions [≤ 4 {name, why}], milestones [≤ 10 {level?, text}], avoid [≤ 8], notes ≤ 1000 chars). An invalid plan is refused with every reason and the old one is kept.',
+    obj({
+      action: { type: 'string', enum: ['show', 'write'] },
+      plan: { type: 'object', description: 'The whole game plan for action "write" (it replaces the old one)' },
+    }, ['action']),
+    (c, p) => wowGamePlan({ cfg: c, action: p.action, plan: p.plan }));
 
   tool('wow_knowledge', 'WoW knowledge', 'List, show, or save researched notes (markdown with frontmatter: topic, sources, checked YYYY-MM-DD, scope). Cached notes live in the player\'s data folder; entries older than 14 days are stale. Slug "progress" holds the player\'s dated progress notes: no frontmatter needed, never stale.',
     obj({
@@ -59,12 +66,13 @@ export default function foreverCompanion(pi, { loadConfig = defaultLoadConfig } 
       const c = cfg();
       if (!c) return undefined;
       const lines = (syncSummary(c) ?? '').split('\n').filter(Boolean);
-      // Fresh live state from the overlay: one line on every turn, none when stale (as the
-      // Claude Code hook); any error reading it counts as no live line.
+      // Fresh live state from the overlay (none when stale) and the game plan (when there is
+      // one): one line each on every turn, as the Claude Code hook; any error reading the
+      // character counts as neither.
       try {
-        const line = liveLine(readCharacter(c, undefined, { questTitles: false }).snapshot);
-        if (line) lines.push(line);
-      } catch { /* no live line */ }
+        const { snapshot } = readCharacter(c, undefined, { questTitles: false });
+        for (const line of [liveLine(snapshot), gamePlanLine(snapshot.gamePlan, snapshot.level)]) if (line) lines.push(line);
+      } catch { /* no live or plan line */ }
       if (!lines.length) return undefined;
       return { message: { customType: 'forever-companion-sync', content: lines.map((l) => `Forever Companion: ${l}`).join('\n'), display: false } };
     } catch {

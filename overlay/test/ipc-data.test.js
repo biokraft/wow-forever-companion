@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { hintsData, lazyChats, chatsData, exclusiveSend } from '../src/ipc-data.js';
+import { hintsData, lazyChats, chatsData, exclusiveSend, gamePlanData } from '../src/ipc-data.js';
 import { buildHints, STARTERS } from '../src/hints.js';
 import { createChatStore } from '../src/chat-store.js';
 
@@ -115,4 +115,42 @@ test('the answering flag is cleared when the answer fails', async () => {
   const state = { answering: false };
   await assert.rejects(exclusiveSend(state, async () => { throw new Error('boom'); }), /boom/);
   assert.equal(state.answering, false);
+});
+
+// ---- The game plan page ----
+
+test('game plan data without a config or a snapshot says so and reads nothing more', () => {
+  const none = { hasSnapshot: false, planChat: false, plan: null, level: null, introSeen: false, folds: {} };
+  assert.deepEqual(gamePlanData({ safeConfig: () => null, readCharacter: never('readCharacter'), characterSlug: never('characterSlug') }), none);
+  const cfg = { dataDir: '/data', overlay: { planFolds: { goal: false } } };
+  const res = gamePlanData({ safeConfig: () => cfg, readCharacter: () => { throw new Error('No synced data'); }, characterSlug: () => 'realm-thrall' });
+  assert.deepEqual(res, { ...none, folds: { goal: false } });
+});
+
+test('game plan data carries the plan, the live level, the intro flag of this character and the folds', () => {
+  const plan = { summary: 'S', goal: 'G' };
+  const calls = [];
+  const cfg = { dataDir: '/data', overlay: { planIntroSeen: { 'realm-thrall': true, 'realm-jaina': true }, planFolds: { card: false, junk: 'x' } } };
+  const res = gamePlanData({
+    safeConfig: () => cfg,
+    readCharacter: (c, name, opts) => { calls.push(opts); return { snapshot: { level: 23, gamePlan: plan } }; },
+    characterSlug: () => 'realm-thrall',
+  });
+  assert.deepEqual(res, { hasSnapshot: true, planChat: true, plan, level: 23, introSeen: true, folds: { card: false } });
+  assert.deepEqual(calls, [{ questTitles: false }]);
+  const fresh = gamePlanData({
+    safeConfig: () => ({ dataDir: '/data' }),
+    readCharacter: () => ({ snapshot: { level: 'x' } }),
+    characterSlug: () => 'realm-thrall',
+  });
+  assert.deepEqual(fresh, { hasSnapshot: true, planChat: true, plan: null, level: null, introSeen: false, folds: {} });
+});
+
+test('game plan data says when the character name gives no plan chat (slug "realm-")', () => {
+  const res = gamePlanData({
+    safeConfig: () => ({ dataDir: '/data', overlay: { planIntroSeen: { 'realm-': true } } }),
+    readCharacter: () => ({ snapshot: { level: 5, gamePlan: null } }),
+    characterSlug: () => 'realm-',
+  });
+  assert.deepEqual(res, { hasSnapshot: true, planChat: false, plan: null, level: 5, introSeen: false, folds: {} });
 });

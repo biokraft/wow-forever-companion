@@ -158,10 +158,14 @@ Security, then try again.
 
 ## 5. Tell the companion about you
 
-Open `AGENTS.md` in your data folder (by default `~/wow-companion/AGENTS.md`) in any text
-editor and fill in the "About me" part: your main character, your goals, your talent plan,
-your professions, and anything you do not want suggested. The companion reads it before
-every answer.
+Your goals, build, playstyle, professions and milestones go in your game plan: in the
+overlay, click **Plan** and then **Start my game plan**, and answer a few questions (from a
+terminal agent, ask "set up my game plan").
+
+For everything else, open `AGENTS.md` in your data folder (by default
+`~/wow-companion/AGENTS.md`) in any text editor and fill in the "About me" part: your main
+character, who you play with, when you play, how you like your answers. The companion reads
+both before every answer.
 
 ## 6. Updating
 

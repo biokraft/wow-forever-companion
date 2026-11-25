@@ -116,6 +116,15 @@ The companion sees your data when the game saves it: on `/fc sync`, logout or qu
   skill. Click a step for a map pin.
 - **Look:** tick **look** in the chat to send a screenshot of the WoW window with your
   question.
+- **Your game plan:** click **Plan** at the top of the chat. The first time, click
+  **Start my game plan** and answer a few questions (what you enjoy, solo or with friends,
+  fast or exploring, role and weapons, professions, what to skip, a first milestone). The
+  companion keeps your goal, build, playstyle, professions and milestones on a card that
+  folds in and out, and every answer follows it. To change it, say so on the Plan page or
+  in any chat. From a terminal, ask "set up my game plan".
+- **Quick answers:** when the companion asks something with a few likely answers, it shows
+  them as chips above the input. Click one to answer, or tick several and click
+  **Send these**. You can always type instead.
 
 It does not give rotation advice or live combat calls (what to press, when to interrupt,
 where to stand). It helps with leveling, quests, routes, gear, talents, professions and
@@ -125,8 +134,10 @@ When it needs class or profession knowledge it does not have, it reads a short l
 sites and saves dated notes with their sources in your data folder. Notes older than 14 days
 are checked again. Answers come from an AI and can be wrong.
 
-Tell it about yourself: fill in "About me" in the `AGENTS.md` file in your data folder (by
-default `~/wow-companion/AGENTS.md`) with your goals, talent plan and professions.
+Tell it about yourself: your goals, build and professions go in your game plan; fill in
+"About me" in the `AGENTS.md` file in your data folder (by default
+`~/wow-companion/AGENTS.md`) with the rest, like who you play with, when you play and how
+you like your answers.
 
 ## Update
 
@@ -219,6 +230,11 @@ Before every question the agent syncs your newest game data. Pi reads "About me"
 - It starts hidden. Click the round **FC** button (drag it anywhere; it remembers) or press
   **Alt+Space**. **Esc** closes it (on macOS focus goes straight back to the game). It never takes focus by
   itself.
+- **Plan** switches between the chat and your game plan page: the plan card on top (fold
+  each part or the whole card; it remembers), a chat below to change it. Each character
+  has its own plan. While you have none, the chat shows a **Set up your game plan** chip.
+- **Chips** appear only when the companion asks a question with a few clear answers; they
+  vanish when you answer or type. Saved chats reopen without them.
 - **Long chats:** when a chat gets too long for the AI, the companion summarises the older
   part for itself and the chat shows a note. You keep the full text. Type `/compact` to do
   it right away.
@@ -276,6 +292,7 @@ On macOS you can put `bin/` on your PATH and type `wowf`.
 | `wowf npc <name>` | find any NPC (trainers, vendors) with coordinates |
 | `wowf knowledge list \| show <slug>` | shipped and cached research notes |
 | `wowf plan write <file>` / `wowf plan show` | push a plan to the in-game panel / show the newest |
+| `wowf gameplan write <file>` / `wowf gameplan show` | save your character's game plan / show it |
 | `wowf overlay` | start the chat overlay |
 | `wowf overlay autostart on\|off\|status` | start the overlay at login (macOS) |
 | `wowf install-addon [--link]` | install (or link, for development) the addon |

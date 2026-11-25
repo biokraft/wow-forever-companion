@@ -26,9 +26,11 @@ into the WoW window, and never handle AI keys or logins.
    **AddOns** on the character screen and tick Forever Companion, log in, and type `/fc sync`.
    Then check with `wowf sync`: it should show level, XP and zone. Empty sections show up in
    the character file's `diagnostics`.
-4. **About me:** offer to fill in "About me" in `AGENTS.md` in the data folder (goals, talent
-   plan, professions, what not to suggest). Write only what the player tells you. Pi reads
-   it directly; Claude Code reads it through `CLAUDE.md`, which imports it.
+4. **About me:** offer to fill in "About me" in `AGENTS.md` in the data folder (main
+   character, friends, when they play, how they like answers). Write only what the player
+   tells you. Pi reads it directly; Claude Code reads it through `CLAUDE.md`, which imports
+   it. Goals, build, professions and milestones go in the game plan instead: the overlay's
+   Plan page sets it up, or the `wow-gameplan` skill when the player asks for it.
 5. **Questie** is strongly recommended (quest database for routes and coordinates). Without
    it, quest lookups are unavailable but everything else works.
 6. **Overlay:** the player starts it with `wowf overlay`; it stays hidden until the FC button

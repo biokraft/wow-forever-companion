@@ -14,3 +14,11 @@ test('the welcome screen tells the player the answers come from an AI', () => {
   assert.ok(welcome, 'welcome block present');
   assert.ok(welcome[1].includes(`<div class="muted">${AI_NOTICE}</div>`), 'one muted line inside the welcome block');
 });
+
+test('the reply chip rules give the exact syntax and when to use it', async () => {
+  const { CHOICES_RULES } = await import('../src/advice-rules.js');
+  assert.equal(typeof CHOICES_RULES, 'string');
+  for (const part of ['<choices>', '<choices multi>', '</choices>', '2 to 6', '40 characters', 'at most one', 'open questions', 'type']) {
+    assert.ok(CHOICES_RULES.includes(part), part);
+  }
+});

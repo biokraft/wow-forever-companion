@@ -9,6 +9,7 @@ import {
   STALE_AFTER_SEC,
   REPLAY_MESSAGES,
   REPLAY_NOTE,
+  PLAN_PREFACE,
 } from '../src/chat-session.js';
 
 const PREFACE_START = '[Earlier messages of this chat, for context:]';
@@ -123,6 +124,17 @@ test('the first message creates and titles the chat and saves the answer', async
   await s.send('And then?');
   assert.equal(h.store.load(fresh.id).title, 'Where do I train my skills?');
   assert.equal(h.client.sent[1].text, 'And then?');
+});
+
+test('a saved answer keeps its text but not its reply chips block', async () => {
+  const h = setup({ script: ['Which do you want?\n<choices>\nFast questing\nDungeons\n</choices>\n'] });
+  const s = h.make();
+  const res = await s.send('What next?');
+  assert.match(res.answer, /<choices>/, 'the page gets the whole answer to draw the chips');
+  const saved = h.store.load(s.current().id);
+  const bot = saved.messages.find((m) => m.role === 'bot');
+  assert.equal(bot.text, 'Which do you want?');
+  assert.ok(!JSON.stringify(saved).includes('<choices'), 'no block on disk');
 });
 
 test('an empty chat is never written to disk', () => {
@@ -479,4 +491,93 @@ test('the compact note is not replayed to the backend as something that was said
   session.open(s.store.list({ character: 'Thrall' })[0].id);
   await session.send('q2');
   assert.ok(!s.client.sent[0].text.includes(COMPACT_NOTE));
+});
+
+// ---- The game plan page's chat ----
+
+test('openPlan starts the plan chat under its own id and saves it, never in the list', async () => {
+  const h = setup({ script: ['Let us start.'] });
+  const s = h.make();
+  const chat = s.openPlan('gameplan-realm-thrall');
+  assert.equal(chat.id, 'gameplan-realm-thrall');
+  assert.deepEqual(chat.messages, []);
+  assert.deepEqual(h.client.opened, [null], 'a fresh backend conversation');
+  await s.send('Help me set up my game plan.');
+  assert.equal(h.store.load('gameplan-realm-thrall').messages.length, 2);
+  assert.deepEqual(h.store.list({ character: 'Thrall' }), []);
+});
+
+test('openPlan reopens a saved plan chat through the normal resume path', async () => {
+  const h = setup();
+  const s = h.make();
+  s.openPlan('gameplan-realm-thrall');
+  await s.send('q1');
+  const saved = h.store.load('gameplan-realm-thrall');
+  s.startNew();
+  h.client.opened.length = 0;
+  const back = s.openPlan('gameplan-realm-thrall');
+  assert.deepEqual(back.messages.map((m) => m.text), ['q1', 'answer 1']);
+  assert.deepEqual(h.client.opened, [saved.backendSessionId], 'resumes its own backend session');
+  h.client.opened.length = 0;
+  assert.equal(s.openPlan('gameplan-realm-thrall'), back, 'already open: nothing switches');
+  assert.deepEqual(h.client.opened, []);
+});
+
+test('openPlan refuses an id that is not a plan chat id', () => {
+  const h = setup();
+  const s = h.make();
+  const before = s.current();
+  assert.equal(s.openPlan('../x'), null);
+  assert.equal(s.openPlan('20260101-000000-aaaa'), null);
+  assert.equal(s.current(), before);
+  assert.deepEqual(h.client.opened, []);
+});
+
+test('every plan chat turn carries the backend-only game plan preface; the saved message stays plain', async () => {
+  const h = setup();
+  const s = h.make();
+  s.openPlan('gameplan-realm-thrall');
+  await s.send('Help me set up my game plan.');
+  await s.send('Questing');
+  assert.equal(h.client.sent[0].text, `${PLAN_PREFACE}\n\nHelp me set up my game plan.`);
+  assert.equal(h.client.sent[1].text, `${PLAN_PREFACE}\n\nQuesting`);
+  assert.match(PLAN_PREFACE, /wow-gameplan/);
+  assert.match(PLAN_PREFACE, /save the plan as the wow-gameplan skill says/);
+  assert.doesNotMatch(PLAN_PREFACE, /wowf|wow_gameplan|drafts\//, 'backend-neutral: Pi and Claude Code save differently');
+  const saved = h.store.load('gameplan-realm-thrall').messages.filter((m) => m.role === 'user').map((m) => m.text);
+  assert.deepEqual(saved, ['Help me set up my game plan.', 'Questing']);
+  assert.ok(!JSON.stringify(h.store.load('gameplan-realm-thrall')).includes('wow-gameplan'));
+});
+
+test('the plan preface comes after a replay and is resent when the session is gone', async () => {
+  const h = setup({ script: [gone(), 'ok'] });
+  const s = h.make();
+  s.openPlan('gameplan-realm-thrall');
+  await s.send('q1').catch(() => {});
+  assert.equal(h.client.sent.length, 2);
+  for (const { text } of h.client.sent) assert.ok(text.includes(PLAN_PREFACE) && text.endsWith('q1'), text);
+});
+
+test('a normal chat gets no plan preface', async () => {
+  const h = setup();
+  const s = h.make();
+  await s.send('hello');
+  assert.equal(h.client.sent[0].text, 'hello');
+});
+
+test('every message tells the backend how to run the toolkit now, so a resumed chat never uses an old path', async () => {
+  const h = setup();
+  h.client.toolkitHint = '[Run the toolkit as `node /new/bin/wowf <command>`.]';
+  const session = h.make();
+  await session.send('first');
+  await session.send('second');
+  for (const s of h.client.sent) assert.match(s.text, /node \/new\/bin\/wowf/);
+  const saved = session.current().messages.filter((m) => m.role === 'user').map((m) => m.text);
+  assert.deepEqual(saved, ['first', 'second'], 'the hint is never saved or shown');
+});
+
+test('a backend without a toolkit hint sends the message unchanged', async () => {
+  const h = setup({ backend: 'pi' });
+  await h.make().send('hello');
+  assert.equal(h.client.sent[0].text, 'hello');
 });

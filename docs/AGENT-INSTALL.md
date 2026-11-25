@@ -141,8 +141,10 @@ Relay these steps to the player in your own words:
    **Esc** returns to the game. On macOS, `node bin/wowf overlay autostart on` starts it at
    every login if they want that.
 4. **About me:** offer to fill in the "About me" part of `AGENTS.md` in the data folder
-   with their main character, goals, talent plan and professions. Write only what the
-   player tells you.
+   with their main character, who they play with, when they play and how they like
+   answers. Write only what the player tells you. Goals, build and professions go in the
+   game plan: they set it up in the overlay (**Plan**, then **Start my game plan**), or you
+   run the `wow-gameplan` skill if they ask you to.
 5. **Live state** (macOS only, off by default): `/fc bridge on` in the game lets the
    companion see level, XP and quest progress as they play. Tell them the risk in these
    words: an outside program reads a coded line that the addon draws; it never controls the

@@ -87,3 +87,31 @@ test('the player docs say how to restart the overlay: start it again', () => {
     assert.ok(read(doc).replace(/\s+/g, ' ').includes('run `node bin/wowf overlay` again to restart it'), doc);
   }
 });
+
+test('README tells players about the Plan page and reply chips', () => {
+  const text = readme();
+  for (const s of ['**Plan**', 'Start my game plan', 'set up my game plan', 'chips']) assert.ok(text.includes(s), s);
+});
+
+test('ARCHITECTURE covers the game plan folder, the wowf gameplan command and the chips block', () => {
+  const text = read('docs/ARCHITECTURE.md');
+  for (const s of ['gameplans/', 'wowf gameplan', '<choices>', 'wow-gameplan', 'wow_gameplan']) assert.ok(text.includes(s), s);
+});
+
+test('CHANGELOG keeps unreleased work in its own section above the released versions', () => {
+  const text = read('CHANGELOG.md');
+  const headings = [...text.matchAll(/^## .*$/gm)];
+  assert.equal(headings[0]?.[0], '## Unreleased', 'Unreleased is the first section');
+  assert.match(headings[1]?.[0] ?? '', /^## \d+\.\d+\.\d+(?: \(\d{4}-\d{2}-\d{2}\))?$/, 'a released version follows it');
+  const section = text.slice(headings[0].index, headings[1].index);
+  assert.match(section, /game plan/i);
+  assert.match(section, /chips/i);
+});
+
+test('player docs say About me holds the rest and the game plan holds goals and build', () => {
+  for (const doc of ['README.md', 'docs/SETUP.md', 'docs/AGENT-INSTALL.md']) {
+    const text = read(doc).replace(/\s+/g, ' ');
+    assert.match(text, /game plan/i, doc);
+    assert.doesNotMatch(text, /talent plan/i, doc);
+  }
+});

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PiClient, piArgs } from '../src/pi-client.js';
-import { ADVICE_RULES } from '../src/advice-rules.js';
+import { ADVICE_RULES, CHOICES_RULES } from '../src/advice-rules.js';
 
 const FAKE = fileURLToPath(new URL('./fake-pi.js', import.meta.url));
 let client;
@@ -67,12 +67,14 @@ test('piArgs keeps Pi read-only and isolated', () => {
   for (const t of ['bash', 'edit', 'write']) assert.ok(!tools.includes(t), t);
   for (const f of ['--mode', 'rpc', '--no-approve', '--no-extensions', '--no-skills', '-e', '/x/pi/extension.js', '--skill', '/x/skills', '--model', 'openai/gpt']) assert.ok(args.includes(f), f);
   assert.ok(tools.includes('wow_state') && tools.includes('wow_plan_write'));
+  assert.ok(tools.includes('wow_gameplan'), 'the plan page can save the game plan');
 });
 
 test('piArgs tells Pi to refuse live combat advice', () => {
   const args = piArgs({ extensionPath: '/e', skillsPath: '/s', model: 'openai/gpt', sessionId: '22222222-2222-4222-8222-222222222222' });
   assert.equal(args.filter((a) => a === '--append-system-prompt').length, 1);
   assert.ok(args[args.indexOf('--append-system-prompt') + 1].includes(ADVICE_RULES));
+  assert.ok(args[args.indexOf('--append-system-prompt') + 1].includes(CHOICES_RULES), 'the reply chip rules go to Pi too');
 });
 
 test('currentModel reads the active model from get_state', async () => {
