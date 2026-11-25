@@ -2,6 +2,7 @@
 // first-use chip sends, and how fold state and the first-use flag are kept in the overlay
 // config. Pure: no I/O, no DOM.
 import { PLAN_SECTIONS } from './plan-card.js';
+import { AI_NOTICE } from './advice-rules.js';
 
 export const START_LABEL = 'Start my game plan';
 // Sent only when the player clicks the Start chip, and shown as their message: plain words.
@@ -44,6 +45,12 @@ export function cardMode({ hasSnapshot, hasPlan, chatEmpty, hasPlanChat = true }
   if (hasPlan) return 'card';
   return chatEmpty ? 'start' : 'none';
 }
+
+/**
+ * The muted AI notice under the plan page's intro (with the Start chip) and its no-data line:
+ * the welcome that carries it elsewhere is hidden on the plan page. '' for the other modes.
+ */
+export const aiNoticeFor = (mode) => (mode === 'start' || mode === 'empty' ? AI_NOTICE : '');
 
 /**
  * The saved folds with one id folded (false) or unfolded (removed); junk in the saved value is

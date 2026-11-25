@@ -38,7 +38,7 @@ import { groupChats, dateLabel } from './src/chat-groups.js';
 import { errorLine, settlePending, activityLabel, workingHtml, elapsedText } from './src/answer-view.js';
 import { parseChoices, visibleText, answerFromChoices } from './src/choices.js';
 import { planCardModel, planCardHtml } from './src/plan-card.js';
-import { planPageState, canSwitch, cardMode, foldsWith, KICKOFF, START_LABEL, INTRO_TEXT, NO_PLAN_TEXT, NO_SNAPSHOT_TEXT, NO_PLAN_CHAT_TEXT } from './src/plan-page.js';
+import { planPageState, canSwitch, cardMode, foldsWith, aiNoticeFor, KICKOFF, START_LABEL, INTRO_TEXT, NO_PLAN_TEXT, NO_SNAPSHOT_TEXT, NO_PLAN_CHAT_TEXT } from './src/plan-page.js';
 
 function add(kind, text) {
   const div = document.createElement('div');
@@ -372,9 +372,16 @@ function drawPlan() {
   const line = document.createElement('div');
   line.className = mode === 'start' ? '' : 'muted plan-note';
   line.textContent = { start: INTRO_TEXT, none: NO_PLAN_TEXT, empty: NO_SNAPSHOT_TEXT, unsupported: NO_PLAN_CHAT_TEXT }[mode];
-  if (mode !== 'start') return box.replaceChildren(line);
-  // Nothing is sent before this click.
-  box.replaceChildren(line, hintButton('hint chip plan-start', '◆', START_LABEL, KICKOFF));
+  // Nothing is sent before the Start chip's click.
+  const parts = mode === 'start' ? [line, hintButton('hint chip plan-start', '◆', START_LABEL, KICKOFF)] : [line];
+  const notice = aiNoticeFor(mode);
+  if (notice) {
+    const n = document.createElement('div');
+    n.className = 'muted';
+    n.textContent = notice;
+    parts.push(n);
+  }
+  box.replaceChildren(...parts);
 }
 
 // The first-use plan page: once the player opens the overlay, for a character with data but

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planPageState, canSwitch, cardMode, foldsWith, introSeenWith, KICKOFF, START_LABEL, FOLD_IDS, NO_PLAN_CHAT_TEXT } from '../src/plan-page.js';
+import { planPageState, canSwitch, cardMode, foldsWith, introSeenWith, aiNoticeFor, KICKOFF, START_LABEL, FOLD_IDS, NO_PLAN_CHAT_TEXT } from '../src/plan-page.js';
+import { AI_NOTICE } from '../src/advice-rules.js';
 
 test('page state: no snapshot is empty, a first look without a plan is the intro, else the card', () => {
   assert.equal(planPageState({ hasSnapshot: false, hasPlan: false, introSeen: false }), 'empty');
@@ -23,6 +24,13 @@ test('card mode: the start chip only on an empty plan chat without a plan', () =
   assert.equal(cardMode({ hasSnapshot: true, hasPlan: false, chatEmpty: false }), 'none');
   assert.equal(cardMode({ hasSnapshot: true, hasPlan: true, chatEmpty: true }), 'card');
   assert.equal(cardMode({ hasSnapshot: true, hasPlan: true, chatEmpty: false }), 'card');
+});
+
+test('the intro and the no-data page carry the AI notice, as the welcome does', () => {
+  // The welcome (with its notice) is hidden on the plan page, and the intro opens by itself.
+  assert.equal(aiNoticeFor('start'), AI_NOTICE);
+  assert.equal(aiNoticeFor('empty'), AI_NOTICE);
+  for (const m of ['card', 'none', 'unsupported', undefined]) assert.equal(aiNoticeFor(m), '', String(m));
 });
 
 test('the kickoff is the plain sentence the player sees; the chip has its plain label', () => {
