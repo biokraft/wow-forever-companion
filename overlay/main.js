@@ -101,7 +101,7 @@ function getClient() {
   // overlay.backend: "claude" = the player's own Claude Code (their subscription, the
   // Forever Companion plugin loads from the data folder); "pi" = any model through Pi.
   client = cfg?.overlay?.backend === 'claude'
-    ? new ClaudeClient({ cwd: cfg.dataDir, env: process.env, model: cfg.overlay.claudeModel ?? 'sonnet', repo: REPO.replace(/\/$/, '') })
+    ? new ClaudeClient({ cwd: cfg.dataDir, env: process.env, model: cfg.overlay.claudeModel ?? 'sonnet', repo: REPO.replace(/[\\/]+$/, '') })
     : new PiClient({
       command: process.env.FC_PI ?? 'pi',
       args: piArgs({ extensionPath: path.join(REPO, 'pi', 'extension.js'), skillsPath: path.join(REPO, 'skills'), model: cfg?.overlay?.model }),
