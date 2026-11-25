@@ -13,11 +13,12 @@ import { focusBack, isWowRunning } from './src/focus.js';
 import { watchWow } from './src/wow-watch.js';
 import { clampOpacity } from './src/opacity.js';
 import { buildHints, STARTERS } from './src/hints.js';
-import { createChatStore } from './src/chat-store.js';
+import { createChatStore, planChatId, isPlanChatId } from './src/chat-store.js';
 import { createChatSession, isCompactCommand } from './src/chat-session.js';
-import { hintsData, lazyChats, chatsData, exclusiveSend } from './src/ipc-data.js';
+import { hintsData, lazyChats, chatsData, exclusiveSend, gamePlanData } from './src/ipc-data.js';
+import { foldsWith, introSeenWith } from './src/plan-page.js';
 import { loadConfig, saveConfig } from '../src/config.js';
-import { readCharacter } from '../src/core.js';
+import { readCharacter, characterSlug } from '../src/core.js';
 import { syncAll } from '../src/sync.js';
 import { reportUrl } from './src/report-url.js';
 import { characterTag } from '../src/bridge/codec.js';
@@ -42,6 +43,8 @@ const LIVE_READ_BEFORE_SEND_MS = 2000;
 const sendState = { answering: false };
 // chat-current opens the latest chat only once (and never after a question was sent).
 let chatStarted = false;
+// The normal chat that was open when the plan page opened: closing the plan page reopens it.
+let chatBeforePlan = null;
 
 function safeConfig() {
   try { return loadConfig(); } catch { return null; }
@@ -90,6 +93,14 @@ function isSavedChat(id) {
 }
 
 const chatView = (chat) => ({ id: chat.id, messages: chat.messages });
+
+// Saves one change to the overlay part of the config; nothing without a config.
+function saveOverlay(change) {
+  const cfg = safeConfig();
+  if (!cfg) return;
+  const overlay = cfg.overlay ?? {};
+  saveConfig({ ...cfg, overlay: { ...overlay, ...change(overlay) } });
+}
 
 function hasSnapshot(cfg) {
   try { readCharacter(cfg); return true; } catch { return false; }
@@ -315,6 +326,47 @@ ipcMain.handle('chat-delete', (_e, id) => {
   if (!isSavedChat(id)) return { openChanged: false };
   chatStarted = true;
   return session.remove(id);
+});
+// The game plan page. Its chat (gameplan-<slug>) is one per character and never in the chat
+// list; switching to or from it goes through the session's open path like any chat, and is
+// refused while an answer runs.
+ipcMain.handle('gameplan', () => gamePlanData({ safeConfig, readCharacter, characterSlug }));
+ipcMain.handle('plan-page', (_e, open) => {
+  const session = chats();
+  if (!session) return null;
+  if (sendState.answering) return { busy: true };
+  chatStarted = true;
+  if (open === true) {
+    let id = null;
+    try { id = planChatId(characterSlug(safeConfig())); } catch { /* no character data yet */ }
+    if (!id) return { chat: null }; // the page shows its empty state; the open chat stays
+    const cur = session.current();
+    if (cur.id !== id) chatBeforePlan = cur.id;
+    return { chat: chatView(session.openPlan(id)) };
+  }
+  // Not on the plan chat (the page had no character data): the open chat stays.
+  if (!isPlanChatId(session.current().id)) return { chat: chatView(session.current()) };
+  // Back to the chat that was open before: reopened when saved, else a new empty one (an
+  // unsaved chat had no messages, so nothing is lost).
+  const back = chatBeforePlan && isSavedChat(chatBeforePlan) ? session.open(chatBeforePlan) : null;
+  chatBeforePlan = null;
+  return { chat: chatView(back ?? session.startNew()) };
+});
+// Fold state of the plan card ({ [section | 'card']: false } when folded); unknown ids are ignored.
+ipcMain.handle('plan-fold', (_e, { id, open } = {}) => {
+  saveOverlay((o) => {
+    const planFolds = foldsWith(o.planFolds, id, open);
+    return planFolds ? { planFolds } : {};
+  });
+});
+// The first-use plan page was shown for the main character: it never opens by itself again.
+ipcMain.handle('plan-intro-seen', () => {
+  saveOverlay((o) => {
+    let slug = null;
+    try { slug = characterSlug(safeConfig()); } catch { /* no character data yet */ }
+    const planIntroSeen = introSeenWith(o.planIntroSeen, slug);
+    return planIntroSeen ? { planIntroSeen } : {};
+  });
 });
 ipcMain.handle('abort', () => client?.abort());
 ipcMain.handle('models', async () => {

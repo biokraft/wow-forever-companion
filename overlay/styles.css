@@ -105,9 +105,33 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .hint.starter .mark { color: var(--muted); }
 
 /* Header buttons for the saved chats: the same small bronze squares as collapse */
-#history, #newchat { width: 18px; height: 18px; padding: 0; flex: none; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 12px/14px var(--font); }
-#history:hover, #newchat:hover:not(:disabled) { filter: brightness(1.25); }
-#newchat:disabled { cursor: default; opacity: 0.5; }
+#history, #newchat, #planbtn { width: 18px; height: 18px; padding: 0; flex: none; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 12px/14px var(--font); }
+#history:hover, #newchat:hover:not(:disabled), #planbtn:hover:not(:disabled) { filter: brightness(1.25); }
+#newchat:disabled, #planbtn:disabled { cursor: default; opacity: 0.5; }
+/* Plan: the same bronze square, as wide as its word; pressed while the plan page is open */
+#planbtn { width: auto; padding: 0 5px; }
+#planbtn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+
+/* Game plan card above the plan page's chat: layout only, the colours and type of the chat
+   hints, the chat list headings and the muted text. Scrolls on its own so the chat keeps room. */
+#plan { flex: none; max-height: 45%; overflow-y: auto; overflow-x: hidden; padding: 10px 14px 8px; display: flex; flex-direction: column; gap: 6px;
+  border-bottom: 1px solid var(--bronze); text-shadow: var(--outline); overflow-wrap: anywhere; }
+#plan::-webkit-scrollbar { width: 6px; }
+#plan::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #6b5222, #c8a24a, #6b5222); border-radius: 4px; }
+#plan::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.35); }
+.plan-card { display: flex; flex-direction: column; gap: 2px; }
+.plan-top { display: flex; align-items: flex-start; gap: 8px; }
+.plan-summary { flex: 1; min-width: 0; color: var(--gold); }
+.plan-fold-all { flex: none; }
+.plan-head { display: flex; gap: 5px; width: 100%; padding: 0; cursor: pointer; text-align: left; background: none; border: 0; text-shadow: var(--outline); }
+.plan-head .mark { flex: none; }
+.plan-head:hover { color: var(--gold); }
+.plan-lines { margin: 0 0 2px; padding-left: 18px; }
+.plan-lines li { margin: 1px 0; }
+.plan-lines li::marker { color: var(--gold-dim); }
+.plan-updated { margin-top: 4px; font-size: 12px; }
+.plan-note { font-size: 12px; font-style: italic; }
+.plan-start { align-self: flex-start; }
 
 /* Saved chats drawer: covers the chat (input included) with the panel's own background.
    Opens and closes without animation; hover only recolours. */
@@ -158,4 +182,4 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
   background: linear-gradient(#8c1c10, #4c0b06); border: 1px solid var(--bronze); box-shadow: inset 0 1px 0 rgba(255,255,255,0.15); }
 
 body.collapsed #chat, body.collapsed #setup { display: none; }
-body.collapsed #history, body.collapsed #newchat { display: none; }
+body.collapsed #history, body.collapsed #newchat, body.collapsed #planbtn { display: none; }
