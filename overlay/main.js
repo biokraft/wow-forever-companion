@@ -404,17 +404,13 @@ ipcMain.handle('models', async () => {
 });
 ipcMain.handle('set-model', async (_e, { provider, id }) => {
   await getClient().setModel(provider, id);
-  const cfg = safeConfig();
-  if (!cfg) return;
-  const key = cfg.overlay?.backend === 'claude' ? 'claudeModel' : 'model';
-  saveConfig({ ...cfg, overlay: { ...(cfg.overlay ?? {}), [key]: provider === 'claude' ? id : `${provider}/${id}` } });
+  saveOverlay((o) => ({ [o.backend === 'claude' ? 'claudeModel' : 'model']: provider === 'claude' ? id : `${provider}/${id}` }));
 });
 ipcMain.handle('opacity', () => clampOpacity(safeConfig()?.overlay?.opacity));
 ipcMain.handle('set-opacity', (_e, { value, save }) => {
   const opacity = clampOpacity(value);
   win?.setOpacity(opacity);
-  const cfg = safeConfig();
-  if (save && cfg) saveConfig({ ...cfg, overlay: { ...(cfg.overlay ?? {}), opacity } });
+  if (save) saveOverlay(() => ({ opacity }));
   return opacity;
 });
 // Opens the bug form in the player's browser. The address comes from trusted values only
@@ -453,9 +449,8 @@ ipcMain.handle('button-move', (_e, { dx, dy }) => {
   button.setPosition(pos.x, pos.y);
 });
 ipcMain.handle('button-save', () => {
-  const cfg = safeConfig();
   const [x, y] = button.getPosition();
-  if (cfg) saveConfig({ ...cfg, overlay: { ...(cfg.overlay ?? {}), button: { x, y } } });
+  saveOverlay(() => ({ button: { x, y } }));
   if (!win?.isVisible()) focusBack({ app }); // a drag may have taken focus from WoW
 });
 ipcMain.handle('collapse', (_e, on) => {
