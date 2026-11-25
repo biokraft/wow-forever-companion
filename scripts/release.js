@@ -46,6 +46,9 @@ export function buildPublicTree(outDir, ref = 'HEAD') {
 
 // Zips the addon from the exported tree, adding the empty plan file the .toc loads.
 export function buildAddonZip(treeDir, outDir, version) {
+  // zip runs inside a temporary folder, so both folders must not depend on the current one.
+  treeDir = path.resolve(treeDir);
+  outDir = path.resolve(outDir);
   const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'forevercompanion-zip-'));
   try {
     const addon = path.join(staging, 'ForeverLog');

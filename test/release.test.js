@@ -52,3 +52,19 @@ test('review: files in the public tree have normal permissions', { skip: process
   assert.equal(fs.statSync(path.join(out, 'README.md')).mode & 0o777, 0o644);
   assert.equal(fs.statSync(path.join(out, 'bin', 'wowf')).mode & 0o777, 0o755);
 });
+
+test('buildAddonZip accepts folders given relative to the current directory, as the release workflow does', { skip: process.platform === 'win32' && 'zip CLI' }, () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fc-relzip-'));
+  const before = process.cwd();
+  try {
+    buildPublicTree(path.join(root, 'tree'));
+    process.chdir(root);
+    const zip = buildAddonZip('tree', 'out', '9.9.8');
+    assert.ok(path.isAbsolute(zip), 'the returned path does not depend on the current directory');
+    assert.ok(fs.statSync(zip).size > 1000);
+    assert.equal(fs.realpathSync(path.dirname(zip)), fs.realpathSync(path.join(root, 'out')));
+  } finally {
+    process.chdir(before);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
