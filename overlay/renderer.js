@@ -53,9 +53,36 @@ function add(kind, text) {
   const div = document.createElement('div');
   div.className = `msg ${kind}`;
   div.innerHTML = render(text);
+  if (kind === 'bot' && text) {
+    div.dataset.raw = text;
+    addActions(div);
+  }
   messages.append(div);
   messages.scrollTop = messages.scrollHeight;
   return div;
+}
+
+// A finished answer gets a Copy button (shown on hover, top right) for its text as written.
+function addActions(bubble) {
+  if (!bubble.dataset.raw) return;
+  const box = document.createElement('div');
+  box.className = 'msg-actions';
+  box.append(copyButton(bubble.dataset.raw));
+  bubble.append(box);
+}
+
+// Under a failed question: asks it again with one click.
+function retryButton(text) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'copy retry';
+  b.textContent = 'Try again';
+  b.addEventListener('click', () => {
+    if (busy || switching || chatless) return;
+    b.remove();
+    ask(text);
+  });
+  return b;
 }
 
 async function refreshStatus() {
@@ -82,6 +109,33 @@ function hintButton(className, mark, text, prompt, onPick) {
   b.addEventListener('click', () => {
     if (prompt != null && !busy && !switching) { onPick?.(); ask(prompt); }
     $('input').focus();
+  });
+  return b;
+}
+
+// A button that copies `text` (a command, an answer) and says so for a moment.
+function copyButton(text, label = 'Copy') {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'copy';
+  b.textContent = label;
+  b.addEventListener('click', async () => {
+    let ok = false;
+    try { ok = await window.fc.copy(text); } catch { /* says so below */ }
+    b.textContent = ok ? 'Copied' : 'Not copied';
+    setTimeout(() => { b.textContent = label; }, 1500);
+  });
+  return b;
+}
+
+// A notice with a command (the update notice): a click copies the command and says so.
+function copyOnClick(b, h) {
+  if (!h.command) return b;
+  b.title = `Click to copy: ${h.command}`;
+  b.addEventListener('click', async () => {
+    let ok = false;
+    try { ok = await window.fc.copy(h.command); } catch { /* the label stays */ }
+    if (ok) b.querySelector('.label').textContent = `Copied: ${h.command}`;
   });
   return b;
 }
@@ -138,7 +192,7 @@ function drawHints() {
   const rowText = (h) => (h.prompt == null ? `${h.label}; ${h.text}` : h.text);
   $('hint-rows').replaceChildren(...v.rows.map((h) => (h.action === 'open-plan'
     ? planHintButton('hint hint-row', h)
-    : hintButton('hint hint-row', '◆', rowText(h), h.prompt, pick(h)))));
+    : copyOnClick(hintButton('hint hint-row', '◆', rowText(h), h.prompt, pick(h)), h))));
   $('starters').replaceChildren(...v.starters.map((s) => hintButton('hint starter', '·', s.label, s.prompt)));
   $('hintbar').replaceChildren(...v.chips.map((h) => {
     if (h.kind === 'choice-send') return sendPicked(h);
@@ -147,7 +201,7 @@ function drawHints() {
     // A single choice sends its label as the player's message; ask() takes the chips away.
     const b = hintButton('hint chip', '◆', h.label, h.prompt, h.kind === 'choice' ? null : pick(h));
     b.title = h.text;
-    return b;
+    return copyOnClick(b, h);
   }));
   $('welcome').hidden = !empty || onPlan;
   $('hintbar').hidden = v.chips.length === 0;
@@ -413,7 +467,16 @@ async function runSetup() {
   const { ok, problems } = await window.fc.setup();
   $('setup').hidden = ok;
   $('chat').hidden = !ok;
-  $('problems').replaceChildren(...problems.map((p) => Object.assign(document.createElement('li'), { textContent: p.text })));
+  $('problems').replaceChildren(...problems.map((p) => {
+    const li = Object.assign(document.createElement('li'), { textContent: p.text });
+    if (p.command) {
+      const line = document.createElement('div');
+      line.className = 'command';
+      line.append(Object.assign(document.createElement('code'), { textContent: p.command }), copyButton(p.command));
+      li.append(line);
+    }
+    return li;
+  }));
   $('history').hidden = !ok;
   $('newchat').hidden = !ok;
   $('planbtn').hidden = !ok;
@@ -443,12 +506,13 @@ function send() {
 // A reply chip block at the end of the answer comes off the text and, for an answer that went
 // through, becomes the offered chips.
 function settle(bubble, res) {
-  const s = settlePending({ raw: bubble.dataset.raw, ok: res?.ok, answer: res?.answer });
+  const s = settlePending({ raw: bubble.dataset.raw, ok: res?.ok, answer: res?.answer, stopped: res?.stopped });
   if (s.action === 'remove') return bubble.remove();
   const { text, choices } = parseChoices(s.action === 'fill' ? s.text : bubble.dataset.raw);
   bubble.dataset.raw = text;
   bubble.innerHTML = render(text); // drops the working line; render() escapes HTML first
-  if (res?.ok && choices) {
+  addActions(bubble);
+  if (res?.ok && !res.stopped && choices) {
     offered = choices;
     picked.clear();
   }
@@ -461,6 +525,7 @@ async function ask(text) {
   clearOffer(); // answered: the offered chips go
   syncBusy();
   $('model').disabled = true; // switching models restarts the backend mid-answer
+  showStop(true);
   add('user', text);
   current = add('bot', '');
   current.dataset.raw = '';
@@ -480,11 +545,11 @@ async function ask(text) {
     settle(pending, res);
     if (res.note) add('note', res.note);
     for (const n of res.notes ?? []) add('note', n);
-    if (!res.ok) add('error', errorLine(res.error));
+    if (!res.ok) add('error', errorLine(res.error)).append(' ', retryButton(text));
   } catch (e) {
     // The call itself failed (no result from main): still say so.
     settle(pending, null);
-    add('error', errorLine(e?.message ?? e));
+    add('error', errorLine(e?.message ?? e)).append(' ', retryButton(text));
   } finally {
     // Even if the call itself rejects, the page must not stay stuck in "answering".
     clearInterval(ticker);
@@ -493,11 +558,20 @@ async function ask(text) {
     syncBusy();
     if (drawerOpen()) drawChatList(); // the answered chat moves up the list
     $('model').disabled = false;
+    showStop(false);
     drawHints(); // the offered reply chips show now, enabled; refreshHints redraws with fresh nudges
     refreshStatus();
     refreshHints();
     refreshPlan(); // the answer may have written the plan (on either page)
   }
+}
+
+// The Stop button is there only while an answer runs. A click asks main to stop it; the
+// answer then ends through ask() like any other, with the text so far and a note.
+function showStop(on) {
+  $('stop').hidden = !on;
+  $('stop').disabled = false;
+  $('stop').textContent = 'Stop';
 }
 
 // The open answer: text so far plus a line saying what the companion is doing right now
@@ -552,6 +626,13 @@ document.addEventListener('keydown', (e) => {
   if (drawerOpen()) closeDrawer();
   else window.fc.hide();
 });
+// Links in answers (sources) open in the browser; the chat window itself never navigates.
+messages.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href]');
+  if (!a) return;
+  e.preventDefault();
+  window.fc.openLink(a.getAttribute('href')).catch(() => {});
+});
 $('history').addEventListener('click', toggleDrawer);
 $('planbtn').addEventListener('click', () => setPage(page === 'plan' ? 'chat' : 'plan'));
 // Card folds: a section header or "Fold all"/"Show all"; the state is saved in the config.
@@ -565,6 +646,13 @@ $('plan').addEventListener('click', (e) => {
   drawPlan();
   window.fc.planFold(b.dataset.fold, open).catch(() => {});
 });
+$('stop').addEventListener('click', () => {
+  if (!busy) return;
+  $('stop').disabled = true;
+  $('stop').textContent = 'Stopping…';
+  window.fc.abort().catch(() => {});
+  $('input').focus(); // an element focus only; the window is left alone
+});
 $('newchat').addEventListener('click', newChat);
 $('drawer-new').addEventListener('click', newChat);
 // The browser opens only from this click; the main process builds the address.
@@ -572,7 +660,10 @@ $('report').addEventListener('click', () => window.fc.reportProblem());
 $('close').addEventListener('click', () => window.fc.hide());
 $('collapse').addEventListener('click', () => {
   const collapsed = document.body.classList.toggle('collapsed');
-  $('collapse').textContent = collapsed ? '+' : '–';
+  // Collapsed, the button opens the chat back up: a different sign than New chat's "+".
+  $('collapse').textContent = collapsed ? '▾' : '–';
+  $('collapse').title = collapsed ? 'Expand' : 'Collapse';
+  $('collapse').setAttribute('aria-label', $('collapse').title);
   if (collapsed) closeDrawer(); // not visible when collapsed: Esc must hide the window, not close it
   window.fc.collapse(collapsed);
 });

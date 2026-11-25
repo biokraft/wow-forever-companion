@@ -49,9 +49,14 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 #status { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--body); color: var(--muted); text-shadow: var(--outline); }
 #bar button { -webkit-app-region: no-drag; cursor: pointer; }
 /* Collapse: small bronze square; close: the round red WoW close button */
-#collapse { width: 18px; height: 18px; padding: 0; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 12px/14px var(--font); }
-#close { width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 1px solid #2a0a06; color: #ffd6c8; font: bold 12px/18px Arial, sans-serif; background: #9b1d10; box-shadow: 0 0 0 1px var(--bronze); }
+#collapse { width: 22px; height: 22px; padding: 0; flex: none; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 13px/18px var(--font); }
+#close { width: 22px; height: 22px; padding: 0; flex: none; border-radius: 50%; border: 1px solid #2a0a06; color: #ffd6c8; font: bold 13px/20px Arial, sans-serif; background: #9b1d10; box-shadow: 0 0 0 1px var(--bronze); }
 #collapse:hover, #close:hover { filter: brightness(1.25); }
+
+/* Keyboard focus: a gold ring on whatever Tab lands on (a mouse click shows none). The
+   question box keeps its gold border instead. */
+:focus-visible { outline: 1px solid var(--gold); outline-offset: 1px; }
+#input:focus-visible, #opacity:focus-visible { outline: none; }
 
 .muted { color: var(--muted); }
 .thinking .dots { display: inline-block; width: 3ch; text-align: left; }
@@ -72,6 +77,8 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .msg.bot strong { color: var(--gold); font-weight: 400; }
 .msg.bot em { color: #e6d3a8; }
 .msg code { background: rgba(255, 209, 0, 0.08); border: 1px solid rgba(200, 162, 74, 0.3); padding: 0 3px; border-radius: 2px; font: 12px Menlo, monospace; color: var(--gold-dim); }
+.msg a { color: var(--gold-dim); text-decoration: underline; text-decoration-color: var(--bronze); text-underline-offset: 2px; cursor: pointer; }
+.msg a:hover { color: var(--gold); text-decoration-color: var(--gold); }
 .msg.bot p { margin: 0 0 6px; }
 .msg.bot h2, .msg.bot h3, .msg.bot h4, .msg.bot h5, .msg.bot h6 { margin: 8px 0 4px; font: 600 14px var(--font); color: var(--gold); font-variant: small-caps; letter-spacing: 0.3px; }
 .msg.bot ul, .msg.bot ol { margin: 0 0 6px; padding-left: 18px; }
@@ -83,6 +90,11 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .msg.bot th { color: var(--gold); font-weight: 400; background: #1d150a; border-bottom-color: var(--bronze); }
 .msg.bot tbody tr:nth-child(even) td { background: rgba(255, 209, 0, 0.04); }
 .msg.bot blockquote { margin: 0 0 6px; padding-left: 8px; border-left: 2px solid var(--bronze); color: var(--muted); }
+/* Copy on a finished answer: top right, on the "Companion" line, only while pointed at */
+.msg.bot { position: relative; }
+.msg-actions { position: absolute; top: -1px; right: 0; visibility: hidden; }
+.msg.bot:hover .msg-actions, .msg-actions:focus-within { visibility: visible; }
+.msg .copy { font-style: normal; }
 .msg.note { color: var(--muted); font-size: 12px; font-style: italic; }
 .msg.error { color: #ff6060; }
 
@@ -105,11 +117,11 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .hint.starter .mark { color: var(--muted); }
 
 /* Header buttons for the saved chats: the same small bronze squares as collapse */
-#history, #newchat, #planbtn { width: 18px; height: 18px; padding: 0; flex: none; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 12px/14px var(--font); }
+#history, #newchat, #planbtn { width: 22px; height: 22px; padding: 0; flex: none; border-radius: 3px; border: 1px solid var(--bronze); background: #241a0b; color: var(--gold-dim); font: bold 13px/18px var(--font); }
 #history:hover, #newchat:hover:not(:disabled), #planbtn:hover:not(:disabled) { filter: brightness(1.25); }
 #newchat:disabled, #planbtn:disabled { cursor: default; opacity: 0.5; }
 /* Plan: the same bronze square, as wide as its word; pressed while the plan page is open */
-#planbtn { width: auto; padding: 0 5px; }
+#planbtn { width: auto; padding: 0 6px; }
 #planbtn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
 
 /* Game plan card above the plan page's chat: layout only, the colours and type of the chat
@@ -172,12 +184,24 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 #opacity { appearance: none; width: 70px; height: 4px; margin: 0; border-radius: 2px; background: var(--bronze-dark); border: 1px solid var(--bronze); cursor: pointer; }
 #opacity::-webkit-slider-thumb { appearance: none; width: 10px; height: 12px; border-radius: 2px; background: var(--gold-dim); border: 1px solid #2a1d08; }
 #opacity:focus { outline: none; border-color: var(--gold); }
+/* Stop: only there while an answer runs; the red of the setup button */
+#stop { cursor: pointer; padding: 1px 10px; border-radius: 3px; color: var(--gold); font: 12px var(--body); text-shadow: var(--outline);
+  background: linear-gradient(#8c1c10, #4c0b06); border: 1px solid var(--bronze); }
+#stop:hover:not(:disabled) { filter: brightness(1.25); }
+#stop:disabled { cursor: default; opacity: 0.6; }
 #usage { margin-left: auto; color: var(--muted); font: 12px var(--body); text-shadow: var(--outline); }
 
 /* Setup checklist */
 #setup { padding: 14px 16px; }
 #setup h2 { margin: 0 0 10px; font-size: 14px; font-weight: normal; color: var(--gold); font-variant: small-caps; }
 #setup li { margin-bottom: 8px; }
+/* The command that fixes a problem, with its copy button */
+.command { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.command code { flex: 1; min-width: 0; overflow-wrap: anywhere; padding: 2px 6px; border-radius: 2px; font: 12px Menlo, Consolas, monospace; color: var(--gold-dim);
+  background: rgba(255, 209, 0, 0.08); border: 1px solid rgba(200, 162, 74, 0.3); }
+#setup .copy, .copy { flex: none; cursor: pointer; padding: 1px 8px; border-radius: 3px; color: var(--gold-dim); font: 12px/1.4 var(--body); text-shadow: var(--outline);
+  background: #0b0906; border: 1px solid var(--bronze); box-shadow: none; }
+.copy:hover { border-color: var(--gold); color: var(--gold); }
 #setup button { cursor: pointer; padding: 4px 14px; border-radius: 3px; color: var(--gold); font: 12px var(--font);
   background: linear-gradient(#8c1c10, #4c0b06); border: 1px solid var(--bronze); box-shadow: inset 0 1px 0 rgba(255,255,255,0.15); }
 

@@ -6,10 +6,13 @@ export const errorLine = (message) => `Could not get an answer: ${message}`;
 /**
  * What to do with the pending answer bubble (it shows the thinking indicator until text
  * arrives) once the send is over. `raw` is the text streamed into it so far; `ok` and `answer`
- * come from the send result (leave them out when the call itself failed).
+ * come from the send result (leave them out when the call itself failed), as does `stopped`.
  * Returns { action: 'keep' } | { action: 'fill', text } | { action: 'remove' }.
  */
-export function settlePending({ raw, ok, answer } = {}) {
+export function settlePending({ raw, ok, answer, stopped } = {}) {
+  // Stopped by the player: the answer is the text the session kept (a chip block that was
+  // still arriving is cut off), whatever the stream holds.
+  if (stopped) return answer ? { action: 'fill', text: String(answer) } : { action: 'remove' };
   if (raw) return { action: 'keep' };
   if (ok && answer) return { action: 'fill', text: String(answer) };
   return { action: 'remove' };

@@ -154,3 +154,26 @@ test('game plan data says when the character name gives no plan chat (slug "real
   });
   assert.deepEqual(res, { hasSnapshot: true, planChat: false, plan: null, level: 5, introSeen: false, folds: {} });
 });
+
+test('the hotkey state reaches the hints, also when the character cannot be read', () => {
+  const hotkey = { key: 'Alt+Space', ok: false };
+  const withCfg = hintsData({ safeConfig: () => ({ dataDir: '/data' }), readCharacter: () => { throw new Error('No snapshot yet'); }, buildHints, starters: STARTERS, hotkey });
+  assert.deepEqual(withCfg.live.map((h) => h.kind), ['hotkey']);
+});
+
+import { copyText, MAX_COPY } from '../src/ipc-data.js';
+
+test('only real, bounded text is copied for the page', () => {
+  assert.equal(copyText('node bin/wowf update'), 'node bin/wowf update');
+  for (const v of [undefined, null, '', 7, { a: 1 }, ['x']]) assert.equal(copyText(v), null);
+  assert.equal(copyText('x'.repeat(MAX_COPY + 5)).length, MAX_COPY);
+});
+
+import { linkToOpen } from '../src/ipc-data.js';
+
+test('only a plain https address from the page is opened in the browser', () => {
+  assert.equal(linkToOpen('https://warcraft.wiki.gg/wiki/Mining?a=1#top'), 'https://warcraft.wiki.gg/wiki/Mining?a=1#top');
+  for (const v of ['http://example.org', 'file:///etc/passwd', 'javascript:alert(1)', 'https://user:pw@example.org/', 'not a url', '', null, 7, 'https://' + 'a'.repeat(3000) + '.org']) {
+    assert.equal(linkToOpen(v), null, String(v).slice(0, 40));
+  }
+});

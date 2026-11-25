@@ -6,10 +6,11 @@ import { planChatId } from './chat-store.js';
 
 /**
  * Hint chips: the merged (live) snapshot's nudges, with level-ups seen against the synced one,
- * and the new-version notice when `update` says a newer release is out. With no config only
+ * the new-version notice when `update` says a newer release is out, and the hotkey notice
+ * when `hotkey` says the key could not be taken. With no config only
  * the starters come back; when the character cannot be read, the notice and the starters.
  */
-export function hintsData({ safeConfig, readCharacter, buildHints, starters, update }) {
+export function hintsData({ safeConfig, readCharacter, buildHints, starters, update, hotkey }) {
   const cfg = safeConfig();
   if (!cfg) return { live: [], starters };
   let merged = null;
@@ -21,7 +22,7 @@ export function hintsData({ safeConfig, readCharacter, buildHints, starters, upd
     merged = null;
   }
   try {
-    return { live: buildHints({ merged, synced, update }), starters };
+    return { live: buildHints({ merged, synced, update, hotkey }), starters };
   } catch {
     return { live: [], starters };
   }
@@ -93,4 +94,24 @@ export function gamePlanData({ safeConfig, readCharacter, characterSlug }) {
     introSeen: planChat && cfg.overlay?.planIntroSeen?.[slug] === true,
     folds,
   };
+}
+
+export const MAX_COPY = 20000;
+
+/** The text a copy request from the page may put on the clipboard: a string, not empty, capped; else null. */
+export function copyText(value) {
+  if (typeof value !== 'string' || value.length === 0) return null;
+  return value.slice(0, MAX_COPY);
+}
+
+/**
+ * The address a link click from the page may open in the browser: https only, no user name
+ * or password in it, of a sane length; else null.
+ */
+export function linkToOpen(value) {
+  if (typeof value !== 'string' || value.length > 2000) return null;
+  let url;
+  try { url = new URL(value); } catch { return null; }
+  if (url.protocol !== 'https:' || url.username || url.password || !url.hostname) return null;
+  return url.href;
 }

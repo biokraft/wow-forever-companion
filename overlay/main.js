@@ -1,9 +1,9 @@
 // Forever Companion overlay: a small chat window above WoW, backed by `pi --mode rpc`.
-import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, shell, systemPreferences } from 'electron';
+import { app, BrowserWindow, clipboard, desktopCapturer, globalShortcut, ipcMain, screen, shell, systemPreferences } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { windowOptions, buttonOptions, applyOverlayLevel, COLLAPSED_HEIGHT, defaultButtonPosition, clampButton, chatPosition } from './src/window-options.js';
+import { windowOptions, buttonOptions, applyOverlayLevel, COLLAPSED_HEIGHT, defaultButtonPosition, clampButton, chatBounds } from './src/window-options.js';
 import { checkSetup } from './src/setup-check.js';
 import { PiClient, piArgs } from './src/pi-client.js';
 import { ClaudeClient } from './src/claude-client.js';
@@ -15,7 +15,7 @@ import { clampOpacity } from './src/opacity.js';
 import { buildHints, STARTERS } from './src/hints.js';
 import { createChatStore, planChatId, isPlanChatId } from './src/chat-store.js';
 import { createChatSession, isCompactCommand } from './src/chat-session.js';
-import { hintsData, lazyChats, chatsData, exclusiveSend, gamePlanData } from './src/ipc-data.js';
+import { hintsData, lazyChats, chatsData, exclusiveSend, gamePlanData, copyText, linkToOpen } from './src/ipc-data.js';
 import { foldsWith, introSeenWith } from './src/plan-page.js';
 import { loadConfig, saveConfig } from '../src/config.js';
 import { readCharacter, characterSlug } from '../src/core.js';
@@ -33,6 +33,7 @@ let wowUp = process.platform !== 'darwin';
 let buttonReady = false;
 let client;
 let expandedHeight = 520;
+let collapsed = false;
 // Pixel bridge: reads live state from the strip ForeverLog draws while WoW runs (macOS only).
 let liveReader = null;
 let stopLiveReads = null;
@@ -55,6 +56,8 @@ function safeConfig() {
 // with "updateCheck": false. Never awaited, every error swallowed: it never delays or breaks
 // anything, and it opens or focuses nothing.
 let update = null;
+// { key, ok }: the key that opens the chat and whether it could be taken; null until tried.
+let hotkeyState = null;
 const UPDATE_CHECK_EVERY_MS = 3600 * 1000;
 function checkUpdate() {
   try {
@@ -228,13 +231,33 @@ function debugWindow(name, w) {
   });
 }
 
+// Saves the chat's place and size a moment after the last move or resize. While it is
+// collapsed to its title bar, the height saved is the one it opens back to.
+let rememberTimer = null;
+function rememberChat() {
+  clearTimeout(rememberTimer);
+  rememberTimer = setTimeout(() => {
+    if (!win || win.isDestroyed()) return;
+    const b = win.getBounds();
+    try {
+      saveOverlay(() => ({ chat: { x: b.x, y: b.y, width: b.width, height: collapsed ? expandedHeight : b.height } }));
+    } catch { /* the place is a nicety: the chat opens at its last saved or default spot */ }
+  }, 500);
+}
+
 function createWindow() {
   win = new BrowserWindow(windowOptions());
   win.setOpacity(clampOpacity(safeConfig()?.overlay?.opacity));
   applyOverlayLevel(win);
   lockDown(win);
-  const chat = chatPosition(screen.getPrimaryDisplay().workArea);
-  win.setPosition(chat.x, chat.y);
+  // The chat opens where the player left it, at the size they gave it (overlay.chat).
+  const primary = screen.getPrimaryDisplay();
+  const areas = [primary, ...screen.getAllDisplays().filter((d) => d.id !== primary.id)].map((d) => d.workArea);
+  const bounds = chatBounds(safeConfig()?.overlay?.chat, areas);
+  win.setBounds(bounds);
+  expandedHeight = bounds.height;
+  win.on('move', rememberChat);
+  win.on('resize', rememberChat);
   win.loadFile(path.join(path.dirname(fileURLToPath(import.meta.url)), 'index.html'));
   if (process.env.FC_DEBUG_DIR) {
     win.webContents.on('did-finish-load', async () => {
@@ -260,7 +283,9 @@ ipcMain.handle('setup', () => checkSetup({ loadConfig, hasSnapshot, backend: saf
 ipcMain.handle('status', () => statusLine());
 // Hint chips: the merged (live) snapshot's nudges, with level-ups seen against the synced one.
 // The page applies dismissals itself, so none are passed here.
-ipcMain.handle('hints', () => hintsData({ safeConfig, readCharacter, buildHints, starters: STARTERS, update }));
+ipcMain.handle('hints', () => hintsData({ safeConfig, readCharacter, buildHints, starters: STARTERS, update, hotkey: hotkeyState }));
+// The key that opens the chat and whether it could be taken, for the button's tooltip.
+ipcMain.handle('hotkey', () => hotkeyState);
 ipcMain.handle('send', (_e, { text, look }) => exclusiveSend(sendState, async () => {
   const session = chats();
   if (!session) return { ok: false, error: 'Not set up yet' };
@@ -281,8 +306,8 @@ ipcMain.handle('send', (_e, { text, look }) => exclusiveSend(sendState, async ()
       return { ok: true, answer: '', notes };
     }
     // The session saves the question and the answer (or the error) to the open chat.
-    const { answer, notes } = await session.send(text, { images });
-    return { ok: true, answer, note, notes };
+    const { answer, notes, stopped } = await session.send(text, { images });
+    return { ok: true, answer, note, notes, stopped };
   } catch (e) {
     return { ok: false, error: e.message, note };
   }
@@ -379,17 +404,13 @@ ipcMain.handle('models', async () => {
 });
 ipcMain.handle('set-model', async (_e, { provider, id }) => {
   await getClient().setModel(provider, id);
-  const cfg = safeConfig();
-  if (!cfg) return;
-  const key = cfg.overlay?.backend === 'claude' ? 'claudeModel' : 'model';
-  saveConfig({ ...cfg, overlay: { ...(cfg.overlay ?? {}), [key]: provider === 'claude' ? id : `${provider}/${id}` } });
+  saveOverlay((o) => ({ [o.backend === 'claude' ? 'claudeModel' : 'model']: provider === 'claude' ? id : `${provider}/${id}` }));
 });
 ipcMain.handle('opacity', () => clampOpacity(safeConfig()?.overlay?.opacity));
 ipcMain.handle('set-opacity', (_e, { value, save }) => {
   const opacity = clampOpacity(value);
   win?.setOpacity(opacity);
-  const cfg = safeConfig();
-  if (save && cfg) saveConfig({ ...cfg, overlay: { ...(cfg.overlay ?? {}), opacity } });
+  if (save) saveOverlay(() => ({ opacity }));
   return opacity;
 });
 // Opens the bug form in the player's browser. The address comes from trusted values only
@@ -404,6 +425,21 @@ ipcMain.handle('report-problem', async () => {
     return false; // no browser could be opened; the click simply does nothing
   }
 });
+// A copy button on the page (a command to run, an answer): plain text onto the clipboard,
+// only ever on the player's click.
+ipcMain.handle('copy', (_e, value) => {
+  const text = copyText(value);
+  if (text === null) return false;
+  clipboard.writeText(text);
+  return true;
+});
+// A link in an answer (a source): opens in the player's browser, only on their click and
+// only for a plain https address. The chat window itself never navigates (lockDown).
+ipcMain.handle('open-link', async (_e, value) => {
+  const url = linkToOpen(value);
+  if (!url) return false;
+  try { await shell.openExternal(url); return true; } catch { return false; }
+});
 ipcMain.handle('hide', () => hide());
 ipcMain.handle('toggle', () => toggle());
 ipcMain.handle('button-move', (_e, { dx, dy }) => {
@@ -413,13 +449,14 @@ ipcMain.handle('button-move', (_e, { dx, dy }) => {
   button.setPosition(pos.x, pos.y);
 });
 ipcMain.handle('button-save', () => {
-  const cfg = safeConfig();
   const [x, y] = button.getPosition();
-  if (cfg) saveConfig({ ...cfg, overlay: { ...(cfg.overlay ?? {}), button: { x, y } } });
+  saveOverlay(() => ({ button: { x, y } }));
   if (!win?.isVisible()) focusBack({ app }); // a drag may have taken focus from WoW
 });
-ipcMain.handle('collapse', (_e, collapsed) => {
+ipcMain.handle('collapse', (_e, on) => {
   const [w, h] = win.getSize();
+  if (on === collapsed) return;
+  collapsed = on === true;
   if (collapsed) { expandedHeight = h; win.setSize(w, COLLAPSED_HEIGHT); } else win.setSize(w, expandedHeight);
 });
 
@@ -451,7 +488,11 @@ if (isPrimary) app.whenReady().then(() => {
       // Start hidden: showing or focusing a window over a running game hides its cursor.
       // The player opens the chat with the button or the hotkey when they want it.
       if (buttonReady) button.showInactive();
-      if (!globalShortcut.isRegistered(hotkey) && !globalShortcut.register(hotkey, toggle)) console.error(`Could not register hotkey ${hotkey}`);
+      // Taken by another app, or not a key Electron knows: the chat says so (hotkeyHint).
+      let ok = globalShortcut.isRegistered(hotkey);
+      try { ok = ok || globalShortcut.register(hotkey, toggle); } catch { ok = false; }
+      hotkeyState = { key: hotkey, ok };
+      if (!ok) console.error(`Could not register hotkey ${hotkey}`);
       if (process.platform === 'darwin') startLiveReads();
     } else {
       stopLive();
