@@ -60,3 +60,13 @@ test('no choices offered keeps the chat chips', () => {
   const v = visibleHints({ live, starters: STARTERS, dismissed: new Set(), empty: false, choices: null });
   assert.deepEqual(v.chips.map((h) => h.key), ['k1', 'k2', 'k3']);
 });
+
+test('while choices are offered only the update notice stays next to them', () => {
+  const update = { key: 'update', kind: 'update', label: '0.4.1 is out', text: 'run: node bin/wowf update', prompt: null };
+  const plan = { key: 'gameplan', kind: 'gameplan', label: 'Set up your game plan', text: 'Opens the Plan page', prompt: null, action: 'open-plan' };
+  const choices = { multi: false, options: ['Fast questing', 'Dungeons'] };
+  const v = visibleHints({ live: [update, plan, ...live], starters: STARTERS, dismissed: new Set(), empty: false, choices });
+  assert.deepEqual(v.chips.map((h) => h.key), ['update', 'choice-0', 'choice-1']);
+  const none = visibleHints({ live: [update, plan, ...live], starters: STARTERS, dismissed: new Set(), empty: false });
+  assert.deepEqual(none.chips.map((h) => h.key), ['update', 'gameplan', 'k1', 'k2', 'k3']);
+});

@@ -5,14 +5,15 @@ import { MAX_ROWS, MAX_CHIPS } from './hints.js';
 // Notices (hints without a prompt, like the update notice) are always shown, first, and take
 // none of the slots the chat hints are capped at.
 // `choices` ({ multi, options } from choices.js) are the reply chips the last answer offered:
-// while offered they take the place of the chat hint chips; a multi choice ends with a
-// "Send these" chip.
+// while offered they take the place of the chat hint chips and of every notice but the update
+// notice (one obvious action: answer the question); a multi choice ends with a "Send these"
+// chip.
 export function visibleHints({ live = [], starters = [], dismissed = new Set(), empty = true, choices = null } = {}) {
   const open = live.filter((h) => !dismissed.has(h.key));
   const notices = open.filter((h) => h.prompt == null);
   const chat = open.filter((h) => h.prompt != null);
   if (empty) return { rows: [...notices, ...chat.slice(0, MAX_ROWS)], chips: [], starters };
-  if (choices?.options?.length) return { rows: [], chips: [...notices, ...choiceChips(choices)], starters: [] };
+  if (choices?.options?.length) return { rows: [], chips: [...notices.filter((h) => h.kind === 'update'), ...choiceChips(choices)], starters: [] };
   return { rows: [], chips: [...notices, ...chat.slice(0, MAX_CHIPS)], starters: [] };
 }
 
