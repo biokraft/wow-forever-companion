@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { agentPath } from './autostart.js';
+import { resolveTool } from './tool-command.js';
 
 // The only AI logins setup offers. `args` follow `pi`. The ChatGPT entry is the `openai`
 // provider's own "Sign in with ChatGPT"; the API-key entries pass --api-key so Pi never
@@ -24,10 +25,12 @@ const PI_INSTALL = ['install', '-g', PI_PACKAGE];
 const ADULT = 'AI providers require their users to be 18 or older.';
 const LABEL = { done: 'done     ', already: 'already  ', skipped: 'skipped  ', failed: 'FAILED   ' };
 
-// Windows runs npm and globally installed CLIs through .cmd shims, which only start through
-// cmd.exe. The command line is built from constant arguments only, and anything a shell
-// could read as syntax is refused.
-const SHIMS = new Set(['npm', 'pi']);
+// Windows runs npm through a .cmd shim, which only starts through cmd.exe. The command line
+// is built from constant arguments only, and anything a shell could read as syntax is
+// refused. Pi is found the way doctor and the overlay find it (resolveTool), so a Pi
+// installed as an .exe works as well as the npm shim.
+const SHIMS = new Set(['npm']);
+const RESOLVED = new Set(['pi']);
 export function windowsCommandLine(cmd, args) {
   for (const a of args) {
     if (!/^[\w@./:=-]+$/.test(a)) throw new Error(`refusing to pass "${a}" through the Windows shell`);
@@ -105,14 +108,19 @@ export async function installOverlayPackages({ run, exists, overlayDir, readFile
  * otherwise its output is collected. A program that cannot start returns a non-zero code.
  * @returns {Promise<{ code: number, stdout: string }>}
  */
-export function runCommand(cmd, args, { cwd, inherit = false, timeoutMs, platform = process.platform } = {}) {
+export function runCommand(cmd, args, { cwd, inherit = false, timeoutMs, platform = process.platform, resolve: resolveCmd = resolveTool } = {}) {
   return new Promise((resolve) => {
     const stdio = inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'];
     let p;
     try {
-      p = platform === 'win32' && SHIMS.has(cmd)
-        ? spawn(windowsCommandLine(cmd, args), { cwd, stdio, shell: true })
-        : spawn(cmd, args, { cwd, stdio });
+      if (platform === 'win32' && SHIMS.has(cmd)) {
+        p = spawn(windowsCommandLine(cmd, args), { cwd, stdio, shell: true });
+      } else if (platform === 'win32' && RESOLVED.has(cmd)) {
+        const tool = resolveCmd(cmd, { platform });
+        p = spawn(tool.command, [...tool.args, ...args], { cwd, stdio });
+      } else {
+        p = spawn(cmd, args, { cwd, stdio });
+      }
     } catch (e) {
       resolve({ code: 1, stdout: String(e.message) });
       return;
