@@ -11,6 +11,8 @@
 - **Reply chips.** When the companion asks a question with a few likely answers, it offers
   them as chips above the input: click one to answer, or tick several and click
   **Send these**. You can always type instead.
+- **Stop.** While the companion answers, a **Stop** button ends the answer. The chat keeps
+  what was written so far, and your next question goes on in the same conversation.
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
 

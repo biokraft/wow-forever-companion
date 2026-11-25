@@ -5,6 +5,9 @@
 // is_error result, exit 1); FAKE_CLAUDE_GONE=exit does the same without the result.
 // FAKE_CLAUDE_CRASH=1: writes "boom" to stderr and exits 1.
 // FAKE_CLAUDE_SESSION=<text>: reports that text as the session id instead of a UUID.
+// FAKE_CLAUDE_SLOW=1: streams "Half an" and then waits; an interrupt control request ends
+// the turn the way the real CLI does (a control_response, then an error result). With
+// FAKE_CLAUDE_SLOW=exit the interrupt makes the process exit instead, without a result.
 import fs from 'node:fs';
 
 const SESSION = process.env.FAKE_CLAUDE_SESSION ?? '11111111-1111-4111-8111-111111111111';
@@ -37,6 +40,16 @@ process.stdin.on('data', (chunk) => {
     const msg = JSON.parse(line);
     if (log) fs.appendFileSync(log, JSON.stringify(msg) + '\n');
     if (process.env.FAKE_CLAUDE_HANG) continue; // never answers: simulates a long run
+    if (process.env.FAKE_CLAUDE_SLOW) {
+      if (msg.type === 'control_request' && msg.request?.subtype === 'interrupt') {
+        if (process.env.FAKE_CLAUDE_SLOW === 'exit') process.exit(0);
+        send({ type: 'control_response', response: { subtype: 'success', request_id: msg.request_id, response: { still_queued: [] } } });
+        send({ type: 'result', subtype: 'error_during_execution', is_error: true, session_id: SESSION, usage: { input_tokens: 0, output_tokens: 0 } });
+      } else {
+        send({ type: 'stream_event', event: { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Half an' } } });
+      }
+      continue;
+    }
     // The real CLI answers /compact with a status, a compact_boundary and an empty result.
     if (msg.message?.content?.[0]?.text === '/compact') {
       send({ type: 'system', subtype: 'status', status: 'compacting', session_id: SESSION });

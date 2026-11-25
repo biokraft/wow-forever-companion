@@ -281,8 +281,8 @@ ipcMain.handle('send', (_e, { text, look }) => exclusiveSend(sendState, async ()
       return { ok: true, answer: '', notes };
     }
     // The session saves the question and the answer (or the error) to the open chat.
-    const { answer, notes } = await session.send(text, { images });
-    return { ok: true, answer, note, notes };
+    const { answer, notes, stopped } = await session.send(text, { images });
+    return { ok: true, answer, note, notes, stopped };
   } catch (e) {
     return { ok: false, error: e.message, note };
   }

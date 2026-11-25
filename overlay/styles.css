@@ -172,6 +172,11 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 #opacity { appearance: none; width: 70px; height: 4px; margin: 0; border-radius: 2px; background: var(--bronze-dark); border: 1px solid var(--bronze); cursor: pointer; }
 #opacity::-webkit-slider-thumb { appearance: none; width: 10px; height: 12px; border-radius: 2px; background: var(--gold-dim); border: 1px solid #2a1d08; }
 #opacity:focus { outline: none; border-color: var(--gold); }
+/* Stop: only there while an answer runs; the red of the setup button */
+#stop { cursor: pointer; padding: 1px 10px; border-radius: 3px; color: var(--gold); font: 12px var(--body); text-shadow: var(--outline);
+  background: linear-gradient(#8c1c10, #4c0b06); border: 1px solid var(--bronze); }
+#stop:hover:not(:disabled) { filter: brightness(1.25); }
+#stop:disabled { cursor: default; opacity: 0.6; }
 #usage { margin-left: auto; color: var(--muted); font: 12px var(--body); text-shadow: var(--outline); }
 
 /* Setup checklist */

@@ -443,12 +443,12 @@ function send() {
 // A reply chip block at the end of the answer comes off the text and, for an answer that went
 // through, becomes the offered chips.
 function settle(bubble, res) {
-  const s = settlePending({ raw: bubble.dataset.raw, ok: res?.ok, answer: res?.answer });
+  const s = settlePending({ raw: bubble.dataset.raw, ok: res?.ok, answer: res?.answer, stopped: res?.stopped });
   if (s.action === 'remove') return bubble.remove();
   const { text, choices } = parseChoices(s.action === 'fill' ? s.text : bubble.dataset.raw);
   bubble.dataset.raw = text;
   bubble.innerHTML = render(text); // drops the working line; render() escapes HTML first
-  if (res?.ok && choices) {
+  if (res?.ok && !res.stopped && choices) {
     offered = choices;
     picked.clear();
   }
@@ -461,6 +461,7 @@ async function ask(text) {
   clearOffer(); // answered: the offered chips go
   syncBusy();
   $('model').disabled = true; // switching models restarts the backend mid-answer
+  showStop(true);
   add('user', text);
   current = add('bot', '');
   current.dataset.raw = '';
@@ -493,11 +494,20 @@ async function ask(text) {
     syncBusy();
     if (drawerOpen()) drawChatList(); // the answered chat moves up the list
     $('model').disabled = false;
+    showStop(false);
     drawHints(); // the offered reply chips show now, enabled; refreshHints redraws with fresh nudges
     refreshStatus();
     refreshHints();
     refreshPlan(); // the answer may have written the plan (on either page)
   }
+}
+
+// The Stop button is there only while an answer runs. A click asks main to stop it; the
+// answer then ends through ask() like any other, with the text so far and a note.
+function showStop(on) {
+  $('stop').hidden = !on;
+  $('stop').disabled = false;
+  $('stop').textContent = 'Stop';
 }
 
 // The open answer: text so far plus a line saying what the companion is doing right now
@@ -564,6 +574,13 @@ $('plan').addEventListener('click', (e) => {
   planData = { ...planData, folds };
   drawPlan();
   window.fc.planFold(b.dataset.fold, open).catch(() => {});
+});
+$('stop').addEventListener('click', () => {
+  if (!busy) return;
+  $('stop').disabled = true;
+  $('stop').textContent = 'Stopping…';
+  window.fc.abort().catch(() => {});
+  $('input').focus(); // an element focus only; the window is left alone
 });
 $('newchat').addEventListener('click', newChat);
 $('drawer-new').addEventListener('click', newChat);

@@ -66,3 +66,10 @@ test('the chat counts as at the bottom within a small slack, so it stays pinned 
   assert.equal(nearBottom({ scrollHeight: 1000, scrollTop: 500, clientHeight: 300 }), false, 'scrolled up to read');
   assert.equal(nearBottom({ scrollHeight: 200, scrollTop: 0, clientHeight: 300 }), true, 'nothing to scroll');
 });
+
+test('a stopped answer shows what the session kept, not the raw stream', () => {
+  // The stream may end inside a chip block; the session hands back the text without it.
+  assert.deepEqual(settlePending({ raw: 'Pick one.\n<choices>\nFast', ok: true, answer: 'Pick one.', stopped: true }), { action: 'fill', text: 'Pick one.' });
+  assert.deepEqual(settlePending({ raw: '', ok: true, answer: '', stopped: true }), { action: 'remove' });
+  assert.deepEqual(settlePending({ raw: '<cho', ok: true, answer: '', stopped: true }), { action: 'remove' });
+});
