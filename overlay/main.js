@@ -3,7 +3,7 @@ import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, s
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { windowOptions, buttonOptions, applyOverlayLevel, COLLAPSED_HEIGHT, defaultButtonPosition, clampButton, chatPosition } from './src/window-options.js';
+import { windowOptions, buttonOptions, applyOverlayLevel, COLLAPSED_HEIGHT, defaultButtonPosition, clampButton, chatBounds } from './src/window-options.js';
 import { checkSetup } from './src/setup-check.js';
 import { PiClient, piArgs } from './src/pi-client.js';
 import { ClaudeClient } from './src/claude-client.js';
@@ -33,6 +33,7 @@ let wowUp = process.platform !== 'darwin';
 let buttonReady = false;
 let client;
 let expandedHeight = 520;
+let collapsed = false;
 // Pixel bridge: reads live state from the strip ForeverLog draws while WoW runs (macOS only).
 let liveReader = null;
 let stopLiveReads = null;
@@ -228,13 +229,33 @@ function debugWindow(name, w) {
   });
 }
 
+// Saves the chat's place and size a moment after the last move or resize. While it is
+// collapsed to its title bar, the height saved is the one it opens back to.
+let rememberTimer = null;
+function rememberChat() {
+  clearTimeout(rememberTimer);
+  rememberTimer = setTimeout(() => {
+    if (!win || win.isDestroyed()) return;
+    const b = win.getBounds();
+    try {
+      saveOverlay(() => ({ chat: { x: b.x, y: b.y, width: b.width, height: collapsed ? expandedHeight : b.height } }));
+    } catch { /* the place is a nicety: the chat opens at its last saved or default spot */ }
+  }, 500);
+}
+
 function createWindow() {
   win = new BrowserWindow(windowOptions());
   win.setOpacity(clampOpacity(safeConfig()?.overlay?.opacity));
   applyOverlayLevel(win);
   lockDown(win);
-  const chat = chatPosition(screen.getPrimaryDisplay().workArea);
-  win.setPosition(chat.x, chat.y);
+  // The chat opens where the player left it, at the size they gave it (overlay.chat).
+  const primary = screen.getPrimaryDisplay();
+  const areas = [primary, ...screen.getAllDisplays().filter((d) => d.id !== primary.id)].map((d) => d.workArea);
+  const bounds = chatBounds(safeConfig()?.overlay?.chat, areas);
+  win.setBounds(bounds);
+  expandedHeight = bounds.height;
+  win.on('move', rememberChat);
+  win.on('resize', rememberChat);
   win.loadFile(path.join(path.dirname(fileURLToPath(import.meta.url)), 'index.html'));
   if (process.env.FC_DEBUG_DIR) {
     win.webContents.on('did-finish-load', async () => {
@@ -418,8 +439,10 @@ ipcMain.handle('button-save', () => {
   if (cfg) saveConfig({ ...cfg, overlay: { ...(cfg.overlay ?? {}), button: { x, y } } });
   if (!win?.isVisible()) focusBack({ app }); // a drag may have taken focus from WoW
 });
-ipcMain.handle('collapse', (_e, collapsed) => {
+ipcMain.handle('collapse', (_e, on) => {
   const [w, h] = win.getSize();
+  if (on === collapsed) return;
+  collapsed = on === true;
   if (collapsed) { expandedHeight = h; win.setSize(w, COLLAPSED_HEIGHT); } else win.setSize(w, expandedHeight);
 });
 

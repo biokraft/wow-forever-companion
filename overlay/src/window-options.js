@@ -71,6 +71,33 @@ export function chatPosition(workArea) {
   return { x: workArea.x + workArea.width - 57 - 380 - 16, y: workArea.y + 80 };
 }
 
+const MIN_CHAT = { width: 300, height: 200 };
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+
+/**
+ * Where the chat window opens: the place and size the player left it (`saved`, from the
+ * config), else the default spot. `workAreas` are the screens' work areas, the primary one
+ * first. A saved place stays on the screen that holds its top-left corner; when that screen
+ * is gone it moves onto the first one. The window always ends up fully visible, no larger
+ * than its screen and no smaller than a usable chat.
+ */
+export function chatBounds(saved, workAreas) {
+  const [first] = workAreas;
+  const { width, height } = windowOptions();
+  const ok = saved && ['x', 'y', 'width', 'height'].every((k) => Number.isFinite(saved[k]));
+  if (!ok) return { ...chatPosition(first), width, height };
+  const inside = (a) => saved.x >= a.x && saved.x < a.x + a.width && saved.y >= a.y && saved.y < a.y + a.height;
+  const area = workAreas.find(inside) ?? first;
+  const w = Math.round(clamp(saved.width, MIN_CHAT.width, area.width));
+  const h = Math.round(clamp(saved.height, MIN_CHAT.height, area.height));
+  return {
+    x: Math.round(clamp(saved.x, area.x, area.x + area.width - w)),
+    y: Math.round(clamp(saved.y, area.y, area.y + area.height - h)),
+    width: w,
+    height: h,
+  };
+}
+
 export function clampButton(pos, workArea) {
   const x = Math.min(Math.max(pos.x, workArea.x), workArea.x + workArea.width - BUTTON_SIZE);
   const y = Math.min(Math.max(pos.y, workArea.y), workArea.y + workArea.height - BUTTON_SIZE);

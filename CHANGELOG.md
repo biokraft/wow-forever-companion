@@ -13,6 +13,7 @@
   **Send these**. You can always type instead.
 - **Stop.** While the companion answers, a **Stop** button ends the answer. The chat keeps
   what was written so far, and your next question goes on in the same conversation.
+- The chat window opens where you left it, at the size you gave it.
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
 
