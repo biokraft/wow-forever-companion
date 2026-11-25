@@ -304,7 +304,7 @@ test('wowState shows the live zone and position, and a quest that left the log i
   assert.match(t, /^Testa L4 45% XP .*· The Barrens 50\.0\/60\.0 \(live\)/);
   assert.match(t, /Carry Your Weight #791 \(left the log: turned in or abandoned, confirmed at next sync\)/);
   assert.doesNotMatch(t, /ready to turn in/);
-  assert.match(t, /Live state from the overlay, seen 1s ago/);
+  assert.match(t, /Live state from the overlay, seen \ds ago/); // 1s, or 2s when the clock ticks over on a slow machine
   assert.match(t, /quest progress is live/);
   assert.match(t, /level 4, the snapshot is from level \d+: talents, trainer, gear and bags need \/fc sync/);
 });
