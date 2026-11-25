@@ -168,3 +168,12 @@ test('only real, bounded text is copied for the page', () => {
   for (const v of [undefined, null, '', 7, { a: 1 }, ['x']]) assert.equal(copyText(v), null);
   assert.equal(copyText('x'.repeat(MAX_COPY + 5)).length, MAX_COPY);
 });
+
+import { linkToOpen } from '../src/ipc-data.js';
+
+test('only a plain https address from the page is opened in the browser', () => {
+  assert.equal(linkToOpen('https://warcraft.wiki.gg/wiki/Mining?a=1#top'), 'https://warcraft.wiki.gg/wiki/Mining?a=1#top');
+  for (const v of ['http://example.org', 'file:///etc/passwd', 'javascript:alert(1)', 'https://user:pw@example.org/', 'not a url', '', null, 7, 'https://' + 'a'.repeat(3000) + '.org']) {
+    assert.equal(linkToOpen(v), null, String(v).slice(0, 40));
+  }
+});

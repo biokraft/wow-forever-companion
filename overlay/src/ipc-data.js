@@ -103,3 +103,15 @@ export function copyText(value) {
   if (typeof value !== 'string' || value.length === 0) return null;
   return value.slice(0, MAX_COPY);
 }
+
+/**
+ * The address a link click from the page may open in the browser: https only, no user name
+ * or password in it, of a sane length; else null.
+ */
+export function linkToOpen(value) {
+  if (typeof value !== 'string' || value.length > 2000) return null;
+  let url;
+  try { url = new URL(value); } catch { return null; }
+  if (url.protocol !== 'https:' || url.username || url.password || !url.hostname) return null;
+  return url.href;
+}

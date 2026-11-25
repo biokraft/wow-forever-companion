@@ -598,6 +598,13 @@ document.addEventListener('keydown', (e) => {
   if (drawerOpen()) closeDrawer();
   else window.fc.hide();
 });
+// Links in answers (sources) open in the browser; the chat window itself never navigates.
+messages.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href]');
+  if (!a) return;
+  e.preventDefault();
+  window.fc.openLink(a.getAttribute('href')).catch(() => {});
+});
 $('history').addEventListener('click', toggleDrawer);
 $('planbtn').addEventListener('click', () => setPage(page === 'plan' ? 'chat' : 'plan'));
 // Card folds: a section header or "Fold all"/"Show all"; the state is saved in the config.

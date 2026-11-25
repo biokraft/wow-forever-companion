@@ -15,7 +15,7 @@ import { clampOpacity } from './src/opacity.js';
 import { buildHints, STARTERS } from './src/hints.js';
 import { createChatStore, planChatId, isPlanChatId } from './src/chat-store.js';
 import { createChatSession, isCompactCommand } from './src/chat-session.js';
-import { hintsData, lazyChats, chatsData, exclusiveSend, gamePlanData, copyText } from './src/ipc-data.js';
+import { hintsData, lazyChats, chatsData, exclusiveSend, gamePlanData, copyText, linkToOpen } from './src/ipc-data.js';
 import { foldsWith, introSeenWith } from './src/plan-page.js';
 import { loadConfig, saveConfig } from '../src/config.js';
 import { readCharacter, characterSlug } from '../src/core.js';
@@ -436,6 +436,13 @@ ipcMain.handle('copy', (_e, value) => {
   if (text === null) return false;
   clipboard.writeText(text);
   return true;
+});
+// A link in an answer (a source): opens in the player's browser, only on their click and
+// only for a plain https address. The chat window itself never navigates (lockDown).
+ipcMain.handle('open-link', async (_e, value) => {
+  const url = linkToOpen(value);
+  if (!url) return false;
+  try { await shell.openExternal(url); return true; } catch { return false; }
 });
 ipcMain.handle('hide', () => hide());
 ipcMain.handle('toggle', () => toggle());

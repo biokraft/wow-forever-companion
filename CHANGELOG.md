@@ -18,6 +18,8 @@
   setting to change; the round button's tooltip names the key you really use.
 - Commands the overlay asks you to run (on the "Almost there" page and in the new-version
   notice) can be copied with a click.
+- Sources in answers are links now instead of raw `[text](address)`; a click opens the page
+  in your browser.
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
 

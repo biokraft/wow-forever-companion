@@ -1,12 +1,28 @@
-// Tiny, safe formatter for answers: escape HTML first, then **bold**, *em*/_em_, `code`.
+// Tiny, safe formatter for answers: escape HTML first, then **bold**, *em*/_em_, `code`
+// and [text](https://...) links.
 const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
+const inline = (escaped) => escaped
+  .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+  .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  .replace(/(^|[^\w*])\*([^*\n]+?)\*(?![\w*])/g, '$1<em>$2</em>')
+  .replace(/(^|[^\w])_([^_\n]+?)_(?!\w)/g, '$1<em>$2</em>');
+
+// [text](https://...): https only, and no character in the address that could end an
+// attribute or start markup. Anything else stays as written.
+const LINK = /\[([^\]\n]+)\]\((https:\/\/[^\s()"'<>`\\]+)\)/g;
+const HOLD = '\u0000';
+
 export function renderLite(text) {
-  return escapeHtml(String(text))
-    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(^|[^\w*])\*([^*\n]+?)\*(?![\w*])/g, '$1<em>$2</em>')
-    .replace(/(^|[^\w])_([^_\n]+?)_(?!\w)/g, '$1<em>$2</em>');
+  // Links are set aside before the inline formatting, which would read the underscores and
+  // stars of an address as emphasis, and put back as real links afterwards.
+  const links = [];
+  const held = String(text).replaceAll(HOLD, '').replace(LINK, (_m, label, url) => {
+    const href = escapeHtml(url);
+    links.push(`<a href="${href}" title="${href}">${inline(escapeHtml(label))}</a>`);
+    return `${HOLD}${links.length - 1}${HOLD}`;
+  });
+  return inline(escapeHtml(held)).replace(/\u0000(\d+)\u0000/g, (_m, i) => links[Number(i)]);
 }
 
 // Block-level markdown for answers: headings, lists, tables, rules, quotes, paragraphs.

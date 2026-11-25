@@ -77,6 +77,8 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .msg.bot strong { color: var(--gold); font-weight: 400; }
 .msg.bot em { color: #e6d3a8; }
 .msg code { background: rgba(255, 209, 0, 0.08); border: 1px solid rgba(200, 162, 74, 0.3); padding: 0 3px; border-radius: 2px; font: 12px Menlo, monospace; color: var(--gold-dim); }
+.msg a { color: var(--gold-dim); text-decoration: underline; text-decoration-color: var(--bronze); text-underline-offset: 2px; cursor: pointer; }
+.msg a:hover { color: var(--gold); text-decoration-color: var(--gold); }
 .msg.bot p { margin: 0 0 6px; }
 .msg.bot h2, .msg.bot h3, .msg.bot h4, .msg.bot h5, .msg.bot h6 { margin: 8px 0 4px; font: 600 14px var(--font); color: var(--gold); font-variant: small-caps; letter-spacing: 0.3px; }
 .msg.bot ul, .msg.bot ol { margin: 0 0 6px; padding-left: 18px; }
