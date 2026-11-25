@@ -9,6 +9,7 @@ import {
   STALE_AFTER_SEC,
   REPLAY_MESSAGES,
   REPLAY_NOTE,
+  PLAN_PREFACE,
 } from '../src/chat-session.js';
 
 const PREFACE_START = '[Earlier messages of this chat, for context:]';
@@ -530,4 +531,35 @@ test('openPlan refuses an id that is not a plan chat id', () => {
   assert.equal(s.openPlan('20260101-000000-aaaa'), null);
   assert.equal(s.current(), before);
   assert.deepEqual(h.client.opened, []);
+});
+
+test('every plan chat turn carries the backend-only game plan preface; the saved message stays plain', async () => {
+  const h = setup();
+  const s = h.make();
+  s.openPlan('gameplan-realm-thrall');
+  await s.send('Help me set up my game plan.');
+  await s.send('Questing');
+  assert.equal(h.client.sent[0].text, `${PLAN_PREFACE}\n\nHelp me set up my game plan.`);
+  assert.equal(h.client.sent[1].text, `${PLAN_PREFACE}\n\nQuesting`);
+  assert.match(PLAN_PREFACE, /wow-gameplan/);
+  assert.match(PLAN_PREFACE, /wowf gameplan write drafts\/gameplan\.json/);
+  const saved = h.store.load('gameplan-realm-thrall').messages.filter((m) => m.role === 'user').map((m) => m.text);
+  assert.deepEqual(saved, ['Help me set up my game plan.', 'Questing']);
+  assert.ok(!JSON.stringify(h.store.load('gameplan-realm-thrall')).includes('wow-gameplan'));
+});
+
+test('the plan preface comes after a replay and is resent when the session is gone', async () => {
+  const h = setup({ script: [gone(), 'ok'] });
+  const s = h.make();
+  s.openPlan('gameplan-realm-thrall');
+  await s.send('q1').catch(() => {});
+  assert.equal(h.client.sent.length, 2);
+  for (const { text } of h.client.sent) assert.ok(text.includes(PLAN_PREFACE) && text.endsWith('q1'), text);
+});
+
+test('a normal chat gets no plan preface', async () => {
+  const h = setup();
+  const s = h.make();
+  await s.send('hello');
+  assert.equal(h.client.sent[0].text, 'hello');
 });

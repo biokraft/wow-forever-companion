@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planPageState, canSwitch, cardMode, foldsWith, introSeenWith, KICKOFF, START_LABEL, FOLD_IDS } from '../src/plan-page.js';
+import { planPageState, canSwitch, cardMode, foldsWith, introSeenWith, KICKOFF, START_LABEL, FOLD_IDS, NO_PLAN_CHAT_TEXT } from '../src/plan-page.js';
 
 test('page state: no snapshot is empty, a first look without a plan is the intro, else the card', () => {
   assert.equal(planPageState({ hasSnapshot: false, hasPlan: false, introSeen: false }), 'empty');
@@ -25,10 +25,9 @@ test('card mode: the start chip only on an empty plan chat without a plan', () =
   assert.equal(cardMode({ hasSnapshot: true, hasPlan: true, chatEmpty: false }), 'card');
 });
 
-test('the kickoff names the wow-gameplan skill and the chip has its plain label', () => {
+test('the kickoff is the plain sentence the player sees; the chip has its plain label', () => {
   assert.equal(START_LABEL, 'Start my game plan');
-  assert.match(KICKOFF, /^Help me set up my game plan\./);
-  assert.match(KICKOFF, /wow-gameplan/);
+  assert.equal(KICKOFF, 'Help me set up my game plan.');
 });
 
 test('folds: a folded id is saved as false, unfolding removes it, unknown ids change nothing', () => {
@@ -48,4 +47,13 @@ test('intro seen is kept per character', () => {
   assert.deepEqual(introSeenWith({ 'realm-jaina': true }, 'realm-thrall'), { 'realm-jaina': true, 'realm-thrall': true });
   assert.equal(introSeenWith({}, ''), null);
   assert.equal(introSeenWith({}, '__proto__'), null);
+});
+
+test('a character whose name gives no plan chat id never gets the intro and reads a truthful line', () => {
+  assert.equal(planPageState({ hasSnapshot: true, hasPlan: false, introSeen: false, hasPlanChat: false }), 'card');
+  assert.equal(planPageState({ hasSnapshot: true, hasPlan: false, introSeen: false, hasPlanChat: true }), 'intro');
+  assert.equal(cardMode({ hasSnapshot: true, hasPlan: false, chatEmpty: true, hasPlanChat: false }), 'unsupported');
+  assert.equal(cardMode({ hasSnapshot: true, hasPlan: true, chatEmpty: true, hasPlanChat: false }), 'unsupported');
+  assert.equal(cardMode({ hasSnapshot: false, hasPlan: false, chatEmpty: true, hasPlanChat: false }), 'empty');
+  assert.doesNotMatch(NO_PLAN_CHAT_TEXT, /No character data/);
 });

@@ -4,11 +4,15 @@
 import { PLAN_SECTIONS } from './plan-card.js';
 
 export const START_LABEL = 'Start my game plan';
-// Sent only when the player clicks the Start chip. Names the skill so the agent loads it.
-export const KICKOFF = 'Help me set up my game plan. Use the wow-gameplan skill: ask me one question at a time, then save the plan with wowf gameplan write.';
+// Sent only when the player clicks the Start chip, and shown as their message: plain words.
+// The agent's guidance (skill, chips, how to save) rides along with every plan chat turn as a
+// backend-only preface (chat-session.js PLAN_PREFACE).
+export const KICKOFF = 'Help me set up my game plan.';
 export const INTRO_TEXT = 'No game plan yet: answer a few questions and the companion keeps your goal, build and milestones here.';
 export const NO_PLAN_TEXT = 'No game plan yet. It shows here once the companion saves it.';
 export const NO_SNAPSHOT_TEXT = 'No character data yet. Log in to WoW and type /fc sync, then open the Plan page again.';
+// A character name without any a-z or 0-9 letter gives no plan chat id (see chat-store.js).
+export const NO_PLAN_CHAT_TEXT = "The Plan page can't keep a chat for this character's name yet. The normal chat still works.";
 
 // 'card' folds the whole card to its summary line; the rest are the sections.
 export const FOLD_IDS = ['card', ...PLAN_SECTIONS.map((s) => s.id)];
@@ -16,12 +20,13 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
  * Which plan page a first look gets: 'empty' without character data, 'intro' (the plan page
- * opens by itself once, with the Start chip) for a character without a plan who never saw it,
- * else 'card'.
+ * opens by itself once, with the Start chip) for a character without a plan who never saw it
+ * and has a plan chat, else 'card'. Without a plan chat (hasPlanChat false) the intro never
+ * opens: it could not keep its seen flag and would come back on every run.
  */
-export function planPageState({ hasSnapshot, hasPlan, introSeen }) {
+export function planPageState({ hasSnapshot, hasPlan, introSeen, hasPlanChat = true }) {
   if (!hasSnapshot) return 'empty';
-  if (!hasPlan && !introSeen) return 'intro';
+  if (!hasPlan && !introSeen && hasPlanChat) return 'intro';
   return 'card';
 }
 
@@ -29,12 +34,13 @@ export function planPageState({ hasSnapshot, hasPlan, introSeen }) {
 export const canSwitch = ({ busy, switching = false }) => !busy && !switching;
 
 /**
- * What the card area shows: 'empty' (no character data), 'start' (no plan and an empty plan
- * chat: one sentence and the Start chip), 'none' (no plan yet, the interview under way) or
- * 'card'.
+ * What the card area shows: 'empty' (no character data), 'unsupported' (no plan chat for this
+ * character's name), 'start' (no plan and an empty plan chat: one sentence and the Start
+ * chip), 'none' (no plan yet, the interview under way) or 'card'.
  */
-export function cardMode({ hasSnapshot, hasPlan, chatEmpty }) {
+export function cardMode({ hasSnapshot, hasPlan, chatEmpty, hasPlanChat = true }) {
   if (!hasSnapshot) return 'empty';
+  if (!hasPlanChat) return 'unsupported';
   if (hasPlan) return 'card';
   return chatEmpty ? 'start' : 'none';
 }

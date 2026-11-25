@@ -13,6 +13,9 @@ export const COMPACT_NOTE = 'Earlier messages summarised: the companion now work
 /** True for the bare `/compact` command typed into the chat. */
 export const isCompactCommand = (text) => String(text ?? '').trim().toLowerCase() === '/compact';
 
+// Sent ahead of every turn in the game plan page's chat, to the backend only: never saved,
+// never shown. The player's own message stays the plain words they clicked or typed.
+export const PLAN_PREFACE = '[This is the game plan page: use the wow-gameplan skill. Ask one question at a time, with reply chips where a few clear answers fit, and save the plan with wowf gameplan write drafts/gameplan.json.]';
 export const REPLAY_NOTE = 'The companion re-read this chat from the saved messages; details it looked up earlier are gone.';
 
 const PREFACE_START = '[Earlier messages of this chat, for context:]';
@@ -136,7 +139,7 @@ export function createChatSession({ store, getClient, backend, character, now = 
     let preface = '';
     const build = () => {
       preface = replay ? replayPreface(earlier) : '';
-      return [preface, stale, text].filter(Boolean).join('\n\n');
+      return [preface, stale, isPlanChatId(target.id) ? PLAN_PREFACE : '', text].filter(Boolean).join('\n\n');
     };
 
     let answer;
