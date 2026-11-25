@@ -3,6 +3,7 @@
 // it cannot be resumed. Pure logic: files go through the chat store, the backend through the
 // client that getClient() returns. No Electron here.
 import { isSessionId } from './session-id.js';
+import { parseChoices } from './choices.js';
 
 export const STALE_AFTER_SEC = 1800;
 export const REPLAY_MESSAGES = 30;
@@ -142,7 +143,9 @@ export function createChatSession({ store, getClient, backend, character, now = 
 
     const notes = fresh;
     fresh = [];
-    target.messages.push({ role: 'bot', text: answer, at: now() });
+    // Reply chips belong to the moment they were offered: the saved text has no block, so a
+    // reopened chat shows none. The page still gets the whole answer to draw them.
+    target.messages.push({ role: 'bot', text: parseChoices(answer).text, at: now() });
     if (preface) {
       target.messages.push({ role: 'note', text: REPLAY_NOTE, at: now() });
       notes.push(REPLAY_NOTE);

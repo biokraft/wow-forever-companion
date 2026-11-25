@@ -13,12 +13,17 @@ const REFRESH_MS = 15000;
 // Saved chats: true while the page waits for main to open, start or delete one, so a question
 // cannot slip in between and land in the wrong chat view.
 let switching = false;
+// Reply chips the last answer offered ({ multi, options }, from choices.js) and, for a multi
+// choice, the indexes the player ticked. Gone once the player types or sends anything.
+let offered = null;
+const picked = new Set();
 const KINDS = new Set(['user', 'bot', 'note', 'error']);
 
 import { renderMarkdown as render } from './src/format.js';
 import { visibleHints } from './src/hint-view.js';
 import { groupChats, dateLabel } from './src/chat-groups.js';
 import { errorLine, settlePending, activityLabel, workingHtml, elapsedText } from './src/answer-view.js';
+import { parseChoices, visibleText, answerFromChoices } from './src/choices.js';
 
 function add(kind, text) {
   const div = document.createElement('div');
@@ -57,16 +62,52 @@ function hintButton(className, mark, text, prompt, onPick) {
   return b;
 }
 
+function clearOffer() {
+  offered = null;
+  picked.clear();
+}
+
+// A multi-choice chip: a click ticks or unticks it (aria-pressed shows which, with the hover
+// border), nothing is sent until "Send these".
+function choiceToggle(h) {
+  const on = picked.has(h.index);
+  const b = hintButton('hint chip', on ? '◆' : '◇', h.label, null);
+  b.setAttribute('aria-pressed', String(on));
+  b.title = h.text;
+  b.addEventListener('click', () => {
+    if (busy || switching) return;
+    if (!picked.delete(h.index)) picked.add(h.index);
+    drawHints();
+  });
+  return b;
+}
+
+// Sends the ticked options as one message ("A, B and C"); off until one is ticked.
+function sendPicked(h) {
+  const b = hintButton('hint chip', '→', h.label, null);
+  b.disabled = busy || picked.size === 0;
+  b.title = h.text;
+  b.addEventListener('click', () => {
+    if (busy || switching || !offered) return;
+    const labels = offered.options.filter((_, i) => picked.has(i));
+    if (labels.length) ask(answerFromChoices(labels));
+  });
+  return b;
+}
+
 function drawHints() {
   const empty = messages.children.length === 0;
-  const v = visibleHints({ live: hints.live, starters: hints.starters, dismissed, empty });
+  const v = visibleHints({ live: hints.live, starters: hints.starters, dismissed, empty, choices: offered });
   const pick = (h) => () => dismissed.add(h.key);
   // A notice's row carries both parts ("0.4.1 is out; run: node bin/wowf update").
   const rowText = (h) => (h.prompt == null ? `${h.label}; ${h.text}` : h.text);
   $('hint-rows').replaceChildren(...v.rows.map((h) => hintButton('hint hint-row', '◆', rowText(h), h.prompt, pick(h))));
   $('starters').replaceChildren(...v.starters.map((s) => hintButton('hint starter', '·', s.label, s.prompt)));
   $('hintbar').replaceChildren(...v.chips.map((h) => {
-    const b = hintButton('hint chip', '◆', h.label, h.prompt, pick(h));
+    if (h.kind === 'choice-send') return sendPicked(h);
+    if (h.kind === 'choice' && offered?.multi) return choiceToggle(h);
+    // A single choice sends its label as the player's message; ask() takes the chips away.
+    const b = hintButton('hint chip', '◆', h.label, h.prompt, h.kind === 'choice' ? null : pick(h));
     b.title = h.text;
     return b;
   }));
@@ -108,6 +149,7 @@ function resetUsage() {
 // An empty chat view: the welcome with its hints comes back.
 function clearView() {
   messages.replaceChildren();
+  clearOffer();
   resetUsage();
   drawHints();
   refreshHints();
@@ -116,6 +158,7 @@ function clearView() {
 // Shows a saved chat ({ id, messages }); stored roles are the add() kinds.
 function showChat(chat) {
   messages.replaceChildren();
+  clearOffer(); // saved answers carry no chip block: a reopened chat offers none
   for (const m of chat.messages ?? []) {
     if (!KINDS.has(m.role)) continue;
     const text = String(m.text ?? '');
@@ -273,13 +316,17 @@ function send() {
 
 // Ends the pending answer bubble: without any streamed text it would keep showing the
 // thinking indicator, so it gets the answer that came with the result, or goes away.
+// A reply chip block at the end of the answer comes off the text and, for an answer that went
+// through, becomes the offered chips.
 function settle(bubble, res) {
   const s = settlePending({ raw: bubble.dataset.raw, ok: res?.ok, answer: res?.answer });
-  if (s.action === 'keep') bubble.innerHTML = render(bubble.dataset.raw); // drops the working line
-  else if (s.action === 'remove') bubble.remove();
-  else if (s.action === 'fill') {
-    bubble.dataset.raw = s.text;
-    bubble.innerHTML = render(s.text); // render() escapes HTML first, as for streamed text
+  if (s.action === 'remove') return bubble.remove();
+  const { text, choices } = parseChoices(s.action === 'fill' ? s.text : bubble.dataset.raw);
+  bubble.dataset.raw = text;
+  bubble.innerHTML = render(text); // drops the working line; render() escapes HTML first
+  if (res?.ok && choices) {
+    offered = choices;
+    picked.clear();
   }
 }
 
@@ -287,6 +334,7 @@ function settle(bubble, res) {
 async function ask(text) {
   if (!text || busy || switching) return;
   busy = true;
+  clearOffer(); // answered: the offered chips go
   syncBusy();
   $('model').disabled = true; // switching models restarts the backend mid-answer
   add('user', text);
@@ -330,7 +378,8 @@ async function ask(text) {
 function paintPending() {
   if (!current) return;
   const sec = (Date.now() - Number(current.dataset.started)) / 1000;
-  current.innerHTML = render(current.dataset.raw) + workingHtml(current.dataset.activity, sec);
+  // A chip block still arriving stays hidden, so its markup never flashes.
+  current.innerHTML = render(visibleText(current.dataset.raw)) + workingHtml(current.dataset.activity, sec);
   messages.scrollTop = messages.scrollHeight;
 }
 
@@ -355,6 +404,12 @@ window.fc.onShown(() => { $('input').focus(); refreshLive(); startRefresh(); });
 window.fc.onHidden(() => { stopRefresh(); closeDrawer(); });
 
 $('ask').addEventListener('submit', (e) => { e.preventDefault(); send(); });
+// Typing an answer of their own takes the offered chips away.
+$('input').addEventListener('input', () => {
+  if (!offered || !$('input').value.trim()) return;
+  clearOffer();
+  drawHints();
+});
 $('input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });

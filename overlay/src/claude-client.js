@@ -3,7 +3,7 @@
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { isSessionId } from './session-id.js';
-import { ADVICE_RULES } from './advice-rules.js';
+import { ADVICE_RULES, CHOICES_RULES } from './advice-rules.js';
 import { resolveTool } from '../../src/tool-command.js';
 
 const MODELS = [
@@ -59,7 +59,7 @@ export function claudeArgs({ model = 'sonnet', repo, sessionId, platform = proce
     ...SAFE_WOWF.map((c) => `Bash(${wowf} ${c})`),
     '--disallowedTools', ...DENIED_WOWF.map((c) => `Bash(${wowf} ${c})`),
     ...NOT_WRITABLE.flatMap((p) => [`Write(${p})`, `Edit(${p})`]),
-    '--append-system-prompt', `Forever Companion overlay: run the toolkit CLI exactly as \`${wowf} <command>\` (allowed: sync, state, quests, npc, plan show, knowledge list|show, plan write drafts/plan.json). Save notes with the Write tool to knowledge/<slug>.md and plans to drafts/plan.json in the data folder; you cannot write anywhere else. Other shell commands are not available. ${ADVICE_RULES}`];
+    '--append-system-prompt', `Forever Companion overlay: run the toolkit CLI exactly as \`${wowf} <command>\` (allowed: sync, state, quests, npc, plan show, knowledge list|show, plan write drafts/plan.json). Save notes with the Write tool to knowledge/<slug>.md and plans to drafts/plan.json in the data folder; you cannot write anywhere else. Other shell commands are not available. ${ADVICE_RULES} ${CHOICES_RULES}`];
   // The last gate before the command line: anything that is not a UUID is left out.
   if (isSessionId(sessionId)) args.push('--resume', sessionId);
   return args;

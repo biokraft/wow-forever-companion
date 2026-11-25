@@ -125,6 +125,17 @@ test('the first message creates and titles the chat and saves the answer', async
   assert.equal(h.client.sent[1].text, 'And then?');
 });
 
+test('a saved answer keeps its text but not its reply chips block', async () => {
+  const h = setup({ script: ['Which do you want?\n<choices>\nFast questing\nDungeons\n</choices>\n'] });
+  const s = h.make();
+  const res = await s.send('What next?');
+  assert.match(res.answer, /<choices>/, 'the page gets the whole answer to draw the chips');
+  const saved = h.store.load(s.current().id);
+  const bot = saved.messages.find((m) => m.role === 'bot');
+  assert.equal(bot.text, 'Which do you want?');
+  assert.ok(!JSON.stringify(saved).includes('<choices'), 'no block on disk');
+});
+
 test('an empty chat is never written to disk', () => {
   const h = setup();
   const s = h.make();

@@ -57,6 +57,9 @@ In Claude Code it lives at `"${CLAUDE_PLUGIN_ROOT}/bin/wowf"`; run it with `node
    snapshot and say so, or ask the player to turn on "look".
 4. Lead with the answer: the next concrete steps, in order, with NPC names, zones and
    coordinates. Short. The player is mid-game.
+5. Reply chips are for overlay chats only: there, an answer may end with one `<choices>` block
+   as the overlay's instructions describe. In a terminal chat (Claude Code or Pi) never write
+   one; the player would see the raw markup.
 
 ## Live state
 

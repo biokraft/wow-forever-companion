@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PiClient, piArgs } from '../src/pi-client.js';
-import { ADVICE_RULES } from '../src/advice-rules.js';
+import { ADVICE_RULES, CHOICES_RULES } from '../src/advice-rules.js';
 
 const FAKE = fileURLToPath(new URL('./fake-pi.js', import.meta.url));
 let client;
@@ -73,6 +73,7 @@ test('piArgs tells Pi to refuse live combat advice', () => {
   const args = piArgs({ extensionPath: '/e', skillsPath: '/s', model: 'openai/gpt', sessionId: '22222222-2222-4222-8222-222222222222' });
   assert.equal(args.filter((a) => a === '--append-system-prompt').length, 1);
   assert.ok(args[args.indexOf('--append-system-prompt') + 1].includes(ADVICE_RULES));
+  assert.ok(args[args.indexOf('--append-system-prompt') + 1].includes(CHOICES_RULES), 'the reply chip rules go to Pi too');
 });
 
 test('currentModel reads the active model from get_state', async () => {

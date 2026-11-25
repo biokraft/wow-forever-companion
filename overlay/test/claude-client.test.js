@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ClaudeClient, claudeArgs } from '../src/claude-client.js';
-import { ADVICE_RULES } from '../src/advice-rules.js';
+import { ADVICE_RULES, CHOICES_RULES } from '../src/advice-rules.js';
 
 const FAKE = fileURLToPath(new URL('./fake-claude.js', import.meta.url));
 let client;
@@ -290,6 +290,7 @@ test('the appended system prompt refuses live combat advice', () => {
   assert.equal(a.filter((x) => x === '--append-system-prompt').length, 1, 'one system prompt, not two');
   const prompt = a[a.indexOf('--append-system-prompt') + 1];
   assert.ok(prompt.includes(ADVICE_RULES));
+  assert.ok(prompt.includes(CHOICES_RULES), 'the reply chip rules go to Claude too');
   assert.match(prompt, /^Forever Companion overlay: run the toolkit CLI/, 'the toolkit instructions stay');
 });
 

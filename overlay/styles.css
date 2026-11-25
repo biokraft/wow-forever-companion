@@ -97,7 +97,7 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
   background: #0b0906; border: 1px solid var(--bronze); border-radius: 3px; }
 .hint .mark { flex: none; color: var(--gold); }
 .hint .label { min-width: 0; overflow-wrap: anywhere; }
-.hint:hover:not(:disabled) { border-color: var(--gold); }
+.hint:hover:not(:disabled), .hint[aria-pressed="true"] { border-color: var(--gold); }
 .hint:disabled { cursor: default; opacity: 0.5; }
 .hint.hint-row { display: flex; width: 100%; }
 .hint.chip .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
