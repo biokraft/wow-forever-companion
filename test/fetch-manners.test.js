@@ -119,8 +119,12 @@ test('gate.allow: a robots fetch that throws allows the page and is not cached',
 
 test('gate.allow: a robots fetch that times out allows the page and is not cached', async () => {
   const clock = fakeClock();
+  // AbortSignal.timeout's timer is unref'd, and a real fetch keeps the event loop alive with
+  // its socket. This fake has no socket, so it holds a timer until the abort; otherwise Node 22
+  // sees an empty event loop and cancels this test and every one after it.
   const hang = (_url, opts) => new Promise((_resolve, reject) => {
-    opts.signal.addEventListener('abort', () => reject(opts.signal.reason));
+    const keepAlive = setInterval(() => {}, 1000);
+    opts.signal.addEventListener('abort', () => { clearInterval(keepAlive); reject(opts.signal.reason); });
   });
   const srv = robotsServer(hang);
   const gate = createGate({ fetchImpl: srv.fetchImpl, now: clock.now, sleep: clock.sleep, timeoutMs: 20 });
