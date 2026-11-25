@@ -1,17 +1,15 @@
-// Knowledge files: shipped with the toolkit (knowledge/) and researched by the agent, cached
-// per player in <dataDir>/knowledge/. Same format: YAML-ish frontmatter with topic, sources,
-// checked (YYYY-MM-DD), scope; markdown body.
+// Knowledge notes: what the player's agent researched, cached per player in
+// <dataDir>/knowledge/. Nothing ships with the toolkit: game facts change with every hotfix,
+// so each player's agent looks them up and keeps them fresh. Format: YAML-ish frontmatter
+// with topic, sources, checked (YYYY-MM-DD), scope; markdown body.
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 export const STALE_DAYS = 14;
 export const MAX_BYTES = 40 * 1024;
-const SHIPPED_DIR = fileURLToPath(new URL('../knowledge/', import.meta.url));
 const CACHE_SLUG = /^[a-z0-9-]{1,60}$/;
 // Names a harness could load as instructions (CLAUDE.md on case-insensitive disks, etc.).
 const RESERVED = new Set(['claude', 'agents', 'agents-override', 'readme', 'system', 'append-system']);
-const SHIPPED_SLUG = /^[a-z0-9-]+(\/[a-z0-9-]+)?$/;
 // knowledge/progress.md holds the player's dated progress notes (the overlay's agent keeps them):
 // listed as "notes", never stale, never re-researched, and written without frontmatter.
 export const NOTES_SLUG = 'progress';
@@ -57,32 +55,25 @@ function describe({ slug, file }, source, now) {
   const checkedMs = validDate(meta.checked);
   const ageDays = checkedMs != null ? Math.max(0, Math.floor((now * 1000 - checkedMs) / 86400000)) : null;
   const valid = Array.isArray(meta.sources) && meta.sources.length > 0 && meta.sources.every((u) => /^https?:\/\/\S+$/.test(u)) && checkedMs != null;
-  // Shipped notes are curated with each release; only cached research ages out.
-  const stale = source === 'shipped' ? false : !valid || ageDays > STALE_DAYS;
+  const stale = !valid || ageDays > STALE_DAYS;
   return { slug, topic: meta.topic ?? slug, checked: meta.checked ?? null, ageDays, stale, valid, source, path: file };
 }
 
 export function listKnowledge(cfg, { now = Math.floor(Date.now() / 1000) } = {}) {
-  const cached = cfg?.dataDir ? walk(cacheDir(cfg)).filter((e) => !e.slug.includes('/')).map((e) => describe(e, 'cache', now)) : [];
-  const shipped = walk(SHIPPED_DIR).map((e) => describe(e, 'shipped', now));
-  return [...cached, ...shipped];
+  if (!cfg?.dataDir) return [];
+  return walk(cacheDir(cfg)).filter((e) => !e.slug.includes('/')).map((e) => describe(e, 'cache', now));
 }
 
 export function readKnowledge(cfg, slug) {
-  if (CACHE_SLUG.test(slug) && cfg?.dataDir) {
-    const f = path.join(cacheDir(cfg), `${slug}.md`);
-    if (fs.existsSync(f)) return fs.readFileSync(f, 'utf8');
-  }
-  if (!SHIPPED_SLUG.test(slug)) throw new Error(`invalid knowledge slug "${slug}"`);
-  const f = path.join(SHIPPED_DIR, `${slug}.md`);
-  if (!fs.existsSync(f)) throw new Error(`knowledge "${slug}" not found`);
+  if (!CACHE_SLUG.test(String(slug))) throw new Error(`invalid knowledge slug "${slug}"`);
+  const f = cfg?.dataDir ? path.join(cacheDir(cfg), `${slug}.md`) : null;
+  if (!f || !fs.existsSync(f)) throw new Error(`knowledge "${slug}" not found`);
   return fs.readFileSync(f, 'utf8');
 }
 
 export function writeKnowledge(cfg, slug, markdown) {
   if (!CACHE_SLUG.test(slug)) throw new Error('slug must be 1-60 characters of a-z, 0-9 and -');
   if (RESERVED.has(slug)) throw new Error(`"${slug}" is a reserved name`);
-  if (fs.existsSync(path.join(SHIPPED_DIR, `${slug}.md`))) throw new Error(`"${slug}" is a shipped note; pick another slug`);
   const text = String(markdown);
   if (Buffer.byteLength(text) > MAX_BYTES) throw new Error(`knowledge entry too large (max ${MAX_BYTES / 1024} kB)`);
   if (slug !== NOTES_SLUG) checkResearchNote(text);

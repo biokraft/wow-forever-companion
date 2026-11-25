@@ -20,12 +20,12 @@ test('parseFrontmatter reads scalars and the sources list', () => {
   assert.deepEqual(parseFrontmatter(doc()).meta, { topic: 'Hunter leveling', sources: ['https://www.wowhead.com/classic/guide/hunter'], checked: '2026-11-25', scope: 'forever' });
 });
 
-test('write then list shows a fresh cache entry; shipped files list too', () => {
+test('write then list shows a fresh cache entry, and nothing that the player did not save', () => {
   writeKnowledge(cfg, 'hunter-leveling', doc());
   const list = listKnowledge(cfg, { now: NOW });
   const mine = list.find((k) => k.slug === 'hunter-leveling');
   assert.deepEqual({ source: mine.source, ageDays: mine.ageDays, stale: mine.stale, topic: mine.topic }, { source: 'cache', ageDays: 0, stale: false, topic: 'Hunter leveling' });
-  assert.ok(list.some((k) => k.source === 'shipped' && k.slug === 'classes/warrior'));
+  assert.deepEqual(list.map((k) => k.source), ['cache'], 'the toolkit ships no notes');
   assert.equal(readKnowledge(cfg, 'hunter-leveling').trim().endsWith('Pet tanks.'), true);
 });
 
@@ -43,21 +43,25 @@ test('invalid writes are rejected with a reason', () => {
   assert.equal(fs.existsSync(path.join(cfg.dataDir, 'knowledge', 'nosrc.md')), false);
 });
 
-test('readKnowledge finds shipped files by their slug and refuses traversal', () => {
-  assert.match(readKnowledge(cfg, 'classes/warrior'), /Warrior/);
+test('readKnowledge reads only the player\'s own notes and refuses traversal', () => {
+  assert.throws(() => readKnowledge(cfg, 'classes/warrior'), /invalid knowledge slug/);
+  assert.throws(() => readKnowledge(cfg, 'forever-rules'), /not found/);
   assert.throws(() => readKnowledge(cfg, '../../package'), /slug|not found/);
+  assert.throws(() => readKnowledge(null, 'hunter-leveling'), /not found/);
+  assert.deepEqual(listKnowledge(null), []);
 });
 
 test('review: reserved, shadowing, future and impossible entries are rejected', () => {
   for (const slug of ['claude', 'Claude', 'agents', 'readme']) assert.throws(() => writeKnowledge(cfg, slug, doc()), /reserved|slug/, slug);
-  assert.throws(() => writeKnowledge(cfg, 'forever-rules', doc()), /shipped/);
+  assert.match(writeKnowledge(cfg, 'forever-rules', doc()), /forever-rules\.md$/, 'a name the toolkit once shipped is the player\'s to use');
   assert.throws(() => writeKnowledge(cfg, 'future', doc({ checked: '2099-01-01' })), /future/);
   assert.throws(() => writeKnowledge(cfg, 'bogus', doc({ checked: '2026-02-30' })), /checked/);
 });
 
-test('review: shipped notes never go stale; cache notes without valid sources do', () => {
+test('review: every research note ages out, and notes without valid sources are stale at once', () => {
   const later = Date.UTC(2027, 5, 1) / 1000;
-  assert.ok(listKnowledge(cfg, { now: later }).filter((k) => k.source === 'shipped').every((k) => !k.stale));
+  writeKnowledge(cfg, 'ages-out', doc());
+  assert.ok(listKnowledge(cfg, { now: later }).filter((k) => k.source === 'cache').every((k) => k.stale));
   fs.mkdirSync(path.join(cfg.dataDir, 'knowledge'), { recursive: true });
   fs.writeFileSync(path.join(cfg.dataDir, 'knowledge', 'handmade.md'), '---\ntopic: x\nchecked: 2026-11-25\n---\nno sources\n');
   const k = listKnowledge(cfg, { now: NOW }).find((e) => e.slug === 'handmade');

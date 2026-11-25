@@ -294,12 +294,13 @@ const commands = {
 
   knowledge({ positional, opts }) {
     const sub0 = positional[1];
-    const cfg = sub0 === 'list' || sub0 === 'show' ? loadConfig() : requireConfig(); // shipped notes need no setup
+    const cfg = sub0 === 'list' ? loadConfig() : requireConfig(); // an empty list needs no setup
     const sub = positional[1];
     if (sub === 'list') {
       const list = listKnowledge(cfg);
       if (opts.json) { out(JSON.stringify(list, null, 2)); return 0; }
-      if (cfg) out(`Save new notes to: ${path.join(cfg.dataDir, 'knowledge')}/<slug>.md (cache); shipped notes are read-only.`);
+      if (cfg) out(`Save new notes to: ${path.join(cfg.dataDir, 'knowledge')}/<slug>.md`);
+      if (!list.length) out('No notes yet: nothing ships with the toolkit. Research the topic and save a note.');
       for (const k of list) out(`${k.slug.padEnd(34)} ${k.source.padEnd(8)} ${k.checked ?? 'no date'}${k.stale ? '  (stale)' : ''}  ${k.topic}`);
       return 0;
     }

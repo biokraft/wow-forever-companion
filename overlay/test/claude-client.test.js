@@ -76,7 +76,7 @@ test('claudeArgs is headless, streaming, isolated, and locked to read-only tools
   // isolation: no user settings/hooks/permission rules, no MCP servers, only our plugin
   for (const f of ['--restricted', '--strict-mcp-config']) assert.ok(a.includes(f), f);
   assert.equal(a[a.indexOf('--plugin-dir') + 1], '/repo');
-  assert.ok(a.includes('/repo/knowledge'), 'knowledge folder readable');
+  assert.ok(!a.includes('--add-dir'), 'no folder beyond the data folder: the toolkit ships no notes');
   assert.equal(a[a.indexOf('--permission-mode') + 1], 'dontAsk');
   assert.match(a[a.indexOf('--tools') + 1], /^Read,Glob,Grep,Bash,Skill/);
   const allowed = a.slice(a.indexOf('--allowedTools') + 1, a.indexOf('--disallowedTools'));

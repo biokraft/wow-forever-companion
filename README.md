@@ -290,7 +290,7 @@ On macOS you can put `bin/` on your PATH and type `wowf`.
 | `wowf quests available [--zone <name>] [--band lo,hi]` | quests you can pick up now |
 | `wowf quests show <id>` | givers, turn-in, prerequisites, coordinates |
 | `wowf npc <name>` | find any NPC (trainers, vendors) with coordinates |
-| `wowf knowledge list \| show <slug>` | shipped and cached research notes |
+| `wowf knowledge list \| show <slug>` | the research notes the companion saved for you |
 | `wowf plan write <file>` / `wowf plan show` | push a plan to the in-game panel / show the newest |
 | `wowf gameplan write <file>` / `wowf gameplan show` | save your character's game plan / show it |
 | `wowf classdata write <file>` / `wowf classdata show` | save what the companion researched about your class (armor, weapons, stat weights) / show it |

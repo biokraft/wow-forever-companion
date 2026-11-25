@@ -353,10 +353,11 @@ test('review: plan write refuses paths that climb out and never echoes file cont
   assert.doesNotMatch(direct.stderr, /SECRET/);
 });
 
-test('review: knowledge list works without a config (shipped notes)', () => {
+test('review: knowledge list works without a config and is empty: nothing ships with the toolkit', () => {
   const r = run(['knowledge', 'list'], { env: { WOWF_CONFIG: path.join(root, 'none.json') } });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /forever-rules .*shipped/);
+  assert.match(r.stdout, /^No notes yet: nothing ships with the toolkit/);
+  assert.doesNotMatch(r.stdout, /shipped/);
 });
 
 test('review: init refuses the home folder as the data folder', () => {

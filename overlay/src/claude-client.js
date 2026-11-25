@@ -53,7 +53,7 @@ export function claudeArgs({ model = 'sonnet', repo, sessionId, platform = proce
   const wowf = wowfCommand(repo, platform);
   const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose',
     '--include-partial-messages', '--model', model,
-    '--restricted', '--strict-mcp-config', '--plugin-dir', repo, '--add-dir', `${repo}/knowledge`,
+    '--restricted', '--strict-mcp-config', '--plugin-dir', repo,
     '--permission-mode', 'dontAsk',
     '--tools', 'Read,Glob,Grep,Bash,Skill,WebSearch,WebFetch,Write,Edit',
     '--allowedTools', 'Read', 'Glob', 'Grep', 'Skill', 'WebSearch', ...WEB_DOMAINS.map((d) => `WebFetch(domain:${d})`),

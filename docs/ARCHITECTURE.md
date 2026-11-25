@@ -41,7 +41,7 @@ reader.
 | Overlay | `overlay/` | Electron chat window and FC launcher. Talks to `pi --mode rpc` or `claude -p` (stream JSON). Renders reply chips (see below) and the game plan page: a foldable plan card drawn from the validated game plan file, with its own chat per character. On macOS also decodes the addon's pixel strip into `<slug>.live.json` (`src/bridge-reader.js`). |
 | Game plan | `src/gameplan.js` | `wowf gameplan write <file>` validates a game plan (schema version 1: summary and goal required; role, playstyle, professions, milestones, avoid, notes, each with length and count limits) and stores it atomically in `gameplans/<slug>.json`; an invalid plan exits 1 with every reason and writes nothing. `wowf gameplan show` prints it. The Claude Code hook, `wowf sync` and Pi add one `Game plan: <summary> · next: <milestone>` line before each prompt. |
 | Live state | `src/live.js` | Merges `<slug>.live.json` over the snapshot when it is under 2 minutes old and newer than the saved game data; read-only, never written back to the snapshot, journal, or plans. |
-| Knowledge | `knowledge/` | Shipped notes (Forever rule changes, Warrior and professions as examples). Players' agents add their own notes to `<data>/knowledge/`. |
+| Knowledge | `src/knowledge.js`, `src/classdata.js` | Nothing about the game ships with the toolkit. Each player's agent researches what it needs on the allowed WoW sites and saves dated, sourced notes in `<data>/knowledge/` (re-checked after 14 days) and the class's armor, weapons and stat weights in `<data>/classdata/`, which the bag-upgrade reminder reads. |
 
 ## Data folder
 
@@ -85,7 +85,7 @@ The rules reach the agent through the overlay's system-prompt addition
 ## Trust order for answers
 
 1. The player's Questie database (exact quest data, offline).
-2. Knowledge notes, shipped or cached, with sources and dates.
+2. Knowledge notes the player's agent saved earlier, with sources and dates.
 3. Fresh research on allowlisted WoW sites, saved back as a note.
 4. The model's own memory, last, and said so.
 

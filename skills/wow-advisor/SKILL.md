@@ -138,8 +138,9 @@ into the in-game panel. One sync then refreshes everything; combine the two if b
 
 You learn what you need and remember it for this player:
 
-1. Start with `knowledge list` (`wow_knowledge` list): shipped notes (Forever rule changes,
-   worked examples) and notes cached earlier in the player's `knowledge/` folder, with ages.
+1. Start with `knowledge list` (`wow_knowledge` list): the notes you saved earlier in the
+   player's `knowledge/` folder, with ages. Nothing ships with the toolkit: a new player's
+   list is empty, and every fact you need you look up once and keep.
    `progress` (listed as `notes`) is the player's progress notes, not research: it is never
    stale and never re-researched.
 2. If the topic is missing, older than 14 days (marked stale), or the question is about recent
@@ -199,7 +200,7 @@ not before every answer. `wowf classdata show` prints what is saved.
    (filters: zone, level band) and `wowf quests show <id>`: quest levels, prerequisites, givers,
    turn-ins, coordinates. It is offline data without Questie's runtime corrections, so a
    rare quest may be off.
-2. Knowledge notes (`knowledge list`): shipped and cached, each with sources and a checked date.
+2. Knowledge notes (`knowledge list`): your earlier research for this player, each with sources and a checked date.
 3. Fresh research, saved back to the cache (see above).
 4. Your own memory of Classic, last, and say when you are relying on it.
 
@@ -219,7 +220,8 @@ When sources disagree or you are unsure, say which you used.
 - **Professions:** current rank from `skills`, next recipe step and materials, what is
   already in the bags, where to gather on the current route.
 - **XP efficiency:** rested XP, Well Fed, dungeon XP rules, group level rules from
-  `forever-rules.md`.
+  your `forever-rules` note (what WoW: Forever changed from Classic: research it from Blizzard's
+  current Forever hotfix thread and Warcraft Tavern's Forever guides, and re-check it when stale).
 
 ## Push the plan to the in-game panel
 
