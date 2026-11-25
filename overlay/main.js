@@ -1,5 +1,5 @@
 // Forever Companion overlay: a small chat window above WoW, backed by `pi --mode rpc`.
-import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, shell, systemPreferences } from 'electron';
+import { app, BrowserWindow, clipboard, desktopCapturer, globalShortcut, ipcMain, screen, shell, systemPreferences } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +15,7 @@ import { clampOpacity } from './src/opacity.js';
 import { buildHints, STARTERS } from './src/hints.js';
 import { createChatStore, planChatId, isPlanChatId } from './src/chat-store.js';
 import { createChatSession, isCompactCommand } from './src/chat-session.js';
-import { hintsData, lazyChats, chatsData, exclusiveSend, gamePlanData } from './src/ipc-data.js';
+import { hintsData, lazyChats, chatsData, exclusiveSend, gamePlanData, copyText } from './src/ipc-data.js';
 import { foldsWith, introSeenWith } from './src/plan-page.js';
 import { loadConfig, saveConfig } from '../src/config.js';
 import { readCharacter, characterSlug } from '../src/core.js';
@@ -428,6 +428,14 @@ ipcMain.handle('report-problem', async () => {
   } catch {
     return false; // no browser could be opened; the click simply does nothing
   }
+});
+// A copy button on the page (a command to run, an answer): plain text onto the clipboard,
+// only ever on the player's click.
+ipcMain.handle('copy', (_e, value) => {
+  const text = copyText(value);
+  if (text === null) return false;
+  clipboard.writeText(text);
+  return true;
 });
 ipcMain.handle('hide', () => hide());
 ipcMain.handle('toggle', () => toggle());

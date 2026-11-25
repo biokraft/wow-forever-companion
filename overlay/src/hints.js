@@ -44,10 +44,11 @@ function fromNudge(n, merged) {
   }
 }
 
-// The new-version notice. It has no question to ask (prompt null): clicking it sends nothing.
+// The new-version notice. It has no question to ask (prompt null): clicking it sends nothing
+// and copies `command` for the player's terminal.
 export function updateHint(update) {
   if (!update?.newer || typeof update.latest !== 'string') return [];
-  return [{ key: 'update', kind: 'update', label: `${update.latest} is out`, text: 'run: node bin/wowf update', prompt: null }];
+  return [{ key: 'update', kind: 'update', label: `${update.latest} is out`, text: 'run: node bin/wowf update', prompt: null, command: 'node bin/wowf update' }];
 }
 
 // The key that opens the chat could not be taken (`hotkey` is { key, ok } from the main

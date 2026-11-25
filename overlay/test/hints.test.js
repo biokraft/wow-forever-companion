@@ -118,7 +118,7 @@ test('starters and limits', () => {
 
 // ---- The new-version notice ----
 
-const UPDATE = { key: 'update', kind: 'update', label: '0.4.1 is out', text: 'run: node bin/wowf update', prompt: null };
+const UPDATE = { key: 'update', kind: 'update', label: '0.4.1 is out', text: 'run: node bin/wowf update', prompt: null, command: 'node bin/wowf update' };
 
 test('a newer release puts the update hint first, ahead of every nudge', () => {
   const s = snap({ quests: [{ id: 12, title: 'A', complete: true }], nudges: [nudge('quests_ready', { short: 'turn-ins ready' })] });

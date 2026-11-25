@@ -86,6 +86,33 @@ function hintButton(className, mark, text, prompt, onPick) {
   return b;
 }
 
+// A button that copies `text` (a command, an answer) and says so for a moment.
+function copyButton(text, label = 'Copy') {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'copy';
+  b.textContent = label;
+  b.addEventListener('click', async () => {
+    let ok = false;
+    try { ok = await window.fc.copy(text); } catch { /* says so below */ }
+    b.textContent = ok ? 'Copied' : 'Not copied';
+    setTimeout(() => { b.textContent = label; }, 1500);
+  });
+  return b;
+}
+
+// A notice with a command (the update notice): a click copies the command and says so.
+function copyOnClick(b, h) {
+  if (!h.command) return b;
+  b.title = `Click to copy: ${h.command}`;
+  b.addEventListener('click', async () => {
+    let ok = false;
+    try { ok = await window.fc.copy(h.command); } catch { /* the label stays */ }
+    if (ok) b.querySelector('.label').textContent = `Copied: ${h.command}`;
+  });
+  return b;
+}
+
 function clearOffer() {
   offered = null;
   picked.clear();
@@ -138,7 +165,7 @@ function drawHints() {
   const rowText = (h) => (h.prompt == null ? `${h.label}; ${h.text}` : h.text);
   $('hint-rows').replaceChildren(...v.rows.map((h) => (h.action === 'open-plan'
     ? planHintButton('hint hint-row', h)
-    : hintButton('hint hint-row', '◆', rowText(h), h.prompt, pick(h)))));
+    : copyOnClick(hintButton('hint hint-row', '◆', rowText(h), h.prompt, pick(h)), h))));
   $('starters').replaceChildren(...v.starters.map((s) => hintButton('hint starter', '·', s.label, s.prompt)));
   $('hintbar').replaceChildren(...v.chips.map((h) => {
     if (h.kind === 'choice-send') return sendPicked(h);
@@ -147,7 +174,7 @@ function drawHints() {
     // A single choice sends its label as the player's message; ask() takes the chips away.
     const b = hintButton('hint chip', '◆', h.label, h.prompt, h.kind === 'choice' ? null : pick(h));
     b.title = h.text;
-    return b;
+    return copyOnClick(b, h);
   }));
   $('welcome').hidden = !empty || onPlan;
   $('hintbar').hidden = v.chips.length === 0;
@@ -413,7 +440,16 @@ async function runSetup() {
   const { ok, problems } = await window.fc.setup();
   $('setup').hidden = ok;
   $('chat').hidden = !ok;
-  $('problems').replaceChildren(...problems.map((p) => Object.assign(document.createElement('li'), { textContent: p.text })));
+  $('problems').replaceChildren(...problems.map((p) => {
+    const li = Object.assign(document.createElement('li'), { textContent: p.text });
+    if (p.command) {
+      const line = document.createElement('div');
+      line.className = 'command';
+      line.append(Object.assign(document.createElement('code'), { textContent: p.command }), copyButton(p.command));
+      li.append(line);
+    }
+    return li;
+  }));
   $('history').hidden = !ok;
   $('newchat').hidden = !ok;
   $('planbtn').hidden = !ok;

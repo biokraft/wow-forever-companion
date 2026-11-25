@@ -74,3 +74,14 @@ test('execCommand starts its process with windowsHide', async () => {
   await execCommand('x', [], { resolve, spawn: (cmd, args, opts) => { seen.push(opts); return spawn(cmd, args, opts); } });
   assert.equal(seen[0].windowsHide, true);
 });
+test('problems the player fixes with one command carry that command, for the copy button', async () => {
+  const cmd = (r) => r.problems.map((p) => [p.code, p.command ?? null]);
+  assert.deepEqual(cmd(await checkSetup({ ...okDeps, loadConfig: () => null })), [['no-config', 'node bin/wowf setup']]);
+  assert.deepEqual(cmd(await checkSetup({ ...okDeps, loadConfig: () => { throw new Error('bad JSON'); } })), [['bad-config', 'node bin/wowf setup']]);
+  assert.deepEqual(cmd(await checkSetup({ ...okDeps, hasSnapshot: () => false })), [['no-data', '/fc sync']]);
+  const noPi = await checkSetup({ ...okDeps, exec: async () => { throw new Error('spawn pi ENOENT'); } });
+  assert.deepEqual(cmd(noPi), [['no-pi', 'npm install -g @earendil-works/pi-coding-agent']]);
+  // A login line has a part only the player knows: nothing to copy as it stands.
+  const exec = async (c, args) => (args[0] === '--list-models' ? { code: 0, stdout: 'No models available' } : okExec(c, args));
+  assert.deepEqual(cmd(await checkSetup({ ...okDeps, exec })), [['no-provider', null]]);
+});

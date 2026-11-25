@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('fc', {
   opacity: () => ipcRenderer.invoke('opacity'),
   setOpacity: (value, save) => ipcRenderer.invoke('set-opacity', { value, save }),
   reportProblem: () => ipcRenderer.invoke('report-problem'),
+  copy: (text) => ipcRenderer.invoke('copy', text),
   hide: () => ipcRenderer.invoke('hide'),
   toggle: () => ipcRenderer.invoke('toggle'),
   hotkey: () => ipcRenderer.invoke('hotkey'),

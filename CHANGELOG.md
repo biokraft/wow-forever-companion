@@ -16,6 +16,8 @@
 - The chat window opens where you left it, at the size you gave it.
 - When another app holds the key that opens the chat, the chat says so and names the
   setting to change; the round button's tooltip names the key you really use.
+- Commands the overlay asks you to run (on the "Almost there" page and in the new-version
+  notice) can be copied with a click.
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
 

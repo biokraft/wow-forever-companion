@@ -160,3 +160,11 @@ test('the hotkey state reaches the hints, also when the character cannot be read
   const withCfg = hintsData({ safeConfig: () => ({ dataDir: '/data' }), readCharacter: () => { throw new Error('No snapshot yet'); }, buildHints, starters: STARTERS, hotkey });
   assert.deepEqual(withCfg.live.map((h) => h.kind), ['hotkey']);
 });
+
+import { copyText, MAX_COPY } from '../src/ipc-data.js';
+
+test('only real, bounded text is copied for the page', () => {
+  assert.equal(copyText('node bin/wowf update'), 'node bin/wowf update');
+  for (const v of [undefined, null, '', 7, { a: 1 }, ['x']]) assert.equal(copyText(v), null);
+  assert.equal(copyText('x'.repeat(MAX_COPY + 5)).length, MAX_COPY);
+});

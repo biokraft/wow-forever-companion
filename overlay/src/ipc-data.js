@@ -95,3 +95,11 @@ export function gamePlanData({ safeConfig, readCharacter, characterSlug }) {
     folds,
   };
 }
+
+export const MAX_COPY = 20000;
+
+/** The text a copy request from the page may put on the clipboard: a string, not empty, capped; else null. */
+export function copyText(value) {
+  if (typeof value !== 'string' || value.length === 0) return null;
+  return value.slice(0, MAX_COPY);
+}
