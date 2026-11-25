@@ -40,16 +40,18 @@ On a real Windows PC two core tests fail. In both cases the app is right and the
 - `test/init.test.js:59`: `gitSafeToRun` is darwin-only logic, but it builds candidate paths
   with `path.join`, which uses `\` on a Windows host. So `/opt/homebrew/bin/git` never
   matches the fake `exists`.
-- `test/setup.test.js:478`: it expects `node bin/wowf setup`, but on win32 the message
-  correctly says `node bin\wowf setup`.
+- `test/setup.test.js:477`: the fake world is darwin, but the expected text was built with
+  `electronMissingText('v22.3.0')`, which defaults to the host's platform and so adds the
+  Windows-only retry hint.
 
-**Files:** `src/init.js:24`, `test/setup.test.js:478`
+**Files:** `src/init.js:24`, `test/setup.test.js:477`
 
-- [ ] In `gitSafeToRun`, use `path.posix.join(dir, 'git')`. The function only does real work
+- [x] In `gitSafeToRun`, use `path.posix.join(dir, 'git')`. The function only does real work
       on darwin, so POSIX paths are right.
-- [ ] In the setup test, accept either separator: `/node bin[\\/]wowf setup/`.
-- [ ] Check `gh run list --workflow ci.yml`. If the windows-latest jobs are red on `main` for
-      the same reason, this task also turns CI green.
+- [x] In the setup test, pass the world's platform: `electronMissingText('v22.3.0', 'darwin')`.
+
+Note: the git-backed tests (init, sync, privacy, public tree) fail rather than skip when
+`git` is not on PATH. Git is a documented requirement, so this is left as is.
 
 ### Task 2: hide console windows for every spawn the overlay makes
 
@@ -59,10 +61,10 @@ opens a console window. That window can land over WoW and take focus.
 **Files:** `overlay/src/pi-client.js:69`, `overlay/src/claude-client.js:87`,
 `overlay/src/setup-check.js:9`, and their tests.
 
-- [ ] Test: give each client a fake `spawn` and assert the options include
+- [x] Test: give each client a fake `spawn` and assert the options include
       `windowsHide: true`. If the clients have no `spawn` seam yet, add one through the
       constructor options.
-- [ ] Add `windowsHide: true` to the three spawns. It has no effect on macOS.
+- [x] Add `windowsHide: true` to the three spawns. It has no effect on macOS.
 
 ### Task 3: give the `claude` backend a Bash-safe path to `wowf` on Windows
 
@@ -75,25 +77,26 @@ exist.
 **Files:** `overlay/main.js:104`, `overlay/src/claude-client.js:41-45`,
 `overlay/test/claude-client.test.js`
 
-- [ ] Test: `claudeArgs({ repo: 'D:\\Games\\wow-forever-companion\\' , platform: 'win32' })`
+- [x] Test: `claudeArgs({ repo: 'D:\\Games\\wow-forever-companion\\' , platform: 'win32' })`
       produces `node "D:/Games/wow-forever-companion/bin/wowf"` in the prompt and in
       every allow rule. Keep the current POSIX cases.
-- [ ] In `claudeArgs`, strip `[\\/]+$`. On win32, convert `\` to `/`. Node and Git Bash
+- [x] In `claudeArgs`, strip `[\\/]+$`. On win32, convert `\` to `/`. Node and Git Bash
       both accept `C:/...`. Always quote the path.
 - [ ] Manual check on Windows with `overlay.backend: "claude"`: ask "what should I do
       next?" and confirm the `wowf` tool calls run.
 
-### Task 4: run the Claude Code plugin hook without `sh`
+### Task 4: the Claude Code plugin hook on Windows (no change needed)
 
-`hooks/hooks.json` wraps the sync in `sh -c '...'`. Whether that works depends on which
-shell Claude Code uses for hooks on Windows.
+`hooks/hooks.json` wraps the sync in `sh -c '...'`. Claude Code's hooks reference says
+shell-form hooks run in Git Bash on Windows (which ships `sh`), and in PowerShell only when
+Git Bash is not installed. `${CLAUDE_PLUGIN_ROOT}` is substituted with forward slashes there.
+So the hook works on any Windows PC with Git for Windows, which the install already needs.
+The `command -v node` guard is deliberate (`test/plugin.test.js:46-48`), so it stays.
 
-**Files:** `hooks/hooks.json`, `test/plugin.test.js`
-
-- [ ] Test: the hook command does not start with `sh ` and calls
-      `node "${CLAUDE_PLUGIN_ROOT}/bin/wowf" sync --hook`.
-- [ ] Change the command to exactly that. `sync --hook` already exits 0 when nothing can be
-      done. A missing `node` gives a non-blocking hook error, which is acceptable.
+- [x] Checked against the hooks reference; no change.
+- [ ] Optional later: if Windows players without Git Bash matter, switch to exec form
+      (`"command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/bin/wowf", "sync", "--hook"]`).
+      That drops the "no node" guard, so the test would change with it.
 
 ### Task 5: find Pi the same way everywhere
 
@@ -103,9 +106,9 @@ missing by setup only.
 
 **Files:** `src/setup.js`, `test/setup.test.js`
 
-- [ ] Test: with a fake PATH that has `pi.exe` and no `pi.cmd`, setup reports Pi as
+- [x] Test: with a fake PATH that has `pi.exe` and no `pi.cmd`, setup reports Pi as
       installed.
-- [ ] Use `resolveTool('pi')` for Pi. Keep `npm.cmd` with `shell: true` and constant
+- [x] Use `resolveTool('pi')` for Pi. Keep `npm.cmd` with `shell: true` and constant
       arguments, as today.
 
 ---
