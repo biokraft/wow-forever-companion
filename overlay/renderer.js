@@ -484,6 +484,7 @@ async function ask(text) {
     syncBusy();
     if (drawerOpen()) drawChatList(); // the answered chat moves up the list
     $('model').disabled = false;
+    drawHints(); // the offered reply chips show now, enabled; refreshHints redraws with fresh nudges
     refreshStatus();
     refreshHints();
     refreshPlan(); // the answer may have written the plan (on either page)
