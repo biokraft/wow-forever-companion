@@ -56,6 +56,8 @@ function safeConfig() {
 // with "updateCheck": false. Never awaited, every error swallowed: it never delays or breaks
 // anything, and it opens or focuses nothing.
 let update = null;
+// { key, ok }: the key that opens the chat and whether it could be taken; null until tried.
+let hotkeyState = null;
 const UPDATE_CHECK_EVERY_MS = 3600 * 1000;
 function checkUpdate() {
   try {
@@ -281,7 +283,9 @@ ipcMain.handle('setup', () => checkSetup({ loadConfig, hasSnapshot, backend: saf
 ipcMain.handle('status', () => statusLine());
 // Hint chips: the merged (live) snapshot's nudges, with level-ups seen against the synced one.
 // The page applies dismissals itself, so none are passed here.
-ipcMain.handle('hints', () => hintsData({ safeConfig, readCharacter, buildHints, starters: STARTERS, update }));
+ipcMain.handle('hints', () => hintsData({ safeConfig, readCharacter, buildHints, starters: STARTERS, update, hotkey: hotkeyState }));
+// The key that opens the chat and whether it could be taken, for the button's tooltip.
+ipcMain.handle('hotkey', () => hotkeyState);
 ipcMain.handle('send', (_e, { text, look }) => exclusiveSend(sendState, async () => {
   const session = chats();
   if (!session) return { ok: false, error: 'Not set up yet' };
@@ -474,7 +478,11 @@ if (isPrimary) app.whenReady().then(() => {
       // Start hidden: showing or focusing a window over a running game hides its cursor.
       // The player opens the chat with the button or the hotkey when they want it.
       if (buttonReady) button.showInactive();
-      if (!globalShortcut.isRegistered(hotkey) && !globalShortcut.register(hotkey, toggle)) console.error(`Could not register hotkey ${hotkey}`);
+      // Taken by another app, or not a key Electron knows: the chat says so (hotkeyHint).
+      let ok = globalShortcut.isRegistered(hotkey);
+      try { ok = ok || globalShortcut.register(hotkey, toggle); } catch { ok = false; }
+      hotkeyState = { key: hotkey, ok };
+      if (!ok) console.error(`Could not register hotkey ${hotkey}`);
       if (process.platform === 'darwin') startLiveReads();
     } else {
       stopLive();

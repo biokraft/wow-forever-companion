@@ -177,3 +177,18 @@ test('the game plan hint is never dismissed and takes no chat hint slot', () => 
   assert.equal(mid.chips[0].key, 'gameplan');
   assert.equal(mid.chips.length, 1 + MAX_CHIPS);
 });
+
+// ---- The hotkey notice: the key that opens the chat could not be taken ----
+
+test('a hotkey another app holds is said in a notice, after the update notice', () => {
+  const HOTKEY = { key: 'hotkey', kind: 'hotkey', label: 'Alt+Space does not open the chat', text: 'another app uses that key; set "overlay.hotkey" in the config to another one, or click the round button', prompt: null };
+  assert.deepEqual(buildHints({ merged: null, hotkey: { key: 'Alt+Space', ok: false } }), [HOTKEY]);
+  const both = buildHints({ merged: null, update: { latest: '0.4.1', newer: true }, hotkey: { key: 'Alt+Space', ok: false } });
+  assert.deepEqual(both.map((h) => h.kind), ['update', 'hotkey']);
+});
+
+test('no hotkey notice while the key works or nothing is known', () => {
+  for (const hotkey of [undefined, null, { key: 'Alt+Space', ok: true }, { ok: false }]) {
+    assert.deepEqual(buildHints({ merged: null, hotkey }), []);
+  }
+});

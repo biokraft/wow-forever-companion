@@ -154,3 +154,9 @@ test('game plan data says when the character name gives no plan chat (slug "real
   });
   assert.deepEqual(res, { hasSnapshot: true, planChat: false, plan: null, level: 5, introSeen: false, folds: {} });
 });
+
+test('the hotkey state reaches the hints, also when the character cannot be read', () => {
+  const hotkey = { key: 'Alt+Space', ok: false };
+  const withCfg = hintsData({ safeConfig: () => ({ dataDir: '/data' }), readCharacter: () => { throw new Error('No snapshot yet'); }, buildHints, starters: STARTERS, hotkey });
+  assert.deepEqual(withCfg.live.map((h) => h.kind), ['hotkey']);
+});

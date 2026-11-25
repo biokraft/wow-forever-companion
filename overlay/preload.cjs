@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('fc', {
   reportProblem: () => ipcRenderer.invoke('report-problem'),
   hide: () => ipcRenderer.invoke('hide'),
   toggle: () => ipcRenderer.invoke('toggle'),
+  hotkey: () => ipcRenderer.invoke('hotkey'),
   moveButton: (dx, dy) => ipcRenderer.invoke('button-move', { dx, dy }),
   saveButton: () => ipcRenderer.invoke('button-save'),
   collapse: (collapsed) => ipcRenderer.invoke('collapse', collapsed),

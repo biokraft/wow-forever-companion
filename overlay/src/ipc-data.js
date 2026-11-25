@@ -6,10 +6,11 @@ import { planChatId } from './chat-store.js';
 
 /**
  * Hint chips: the merged (live) snapshot's nudges, with level-ups seen against the synced one,
- * and the new-version notice when `update` says a newer release is out. With no config only
+ * the new-version notice when `update` says a newer release is out, and the hotkey notice
+ * when `hotkey` says the key could not be taken. With no config only
  * the starters come back; when the character cannot be read, the notice and the starters.
  */
-export function hintsData({ safeConfig, readCharacter, buildHints, starters, update }) {
+export function hintsData({ safeConfig, readCharacter, buildHints, starters, update, hotkey }) {
   const cfg = safeConfig();
   if (!cfg) return { live: [], starters };
   let merged = null;
@@ -21,7 +22,7 @@ export function hintsData({ safeConfig, readCharacter, buildHints, starters, upd
     merged = null;
   }
   try {
-    return { live: buildHints({ merged, synced, update }), starters };
+    return { live: buildHints({ merged, synced, update, hotkey }), starters };
   } catch {
     return { live: [], starters };
   }
