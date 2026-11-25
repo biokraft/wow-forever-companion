@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- **Your game plan.** A **Plan** button in the chat overlay opens one page per character with
+  your goal, role and build, playstyle, professions, milestones and what to skip, on a card
+  whose parts fold in and out. The first time, click **Start my game plan** and the
+  companion asks a few questions, one at a time. Every answer then follows the plan, and the
+  companion says so when something you ask goes against it and offers to update it. From a
+  terminal agent, ask "set up my game plan"; `wowf gameplan show` prints it.
+- **Reply chips.** When the companion asks a question with a few likely answers, it offers
+  them as chips above the input: click one to answer, or tick several and click
+  **Send these**. You can always type instead.
+- "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
+  and how you like your answers; goals, build and professions moved to the game plan.
+
 ## 0.4.0 (2026-11-25)
 
 First public release of Forever Companion: an advisor for WoW: Forever that reads your real
