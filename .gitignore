@@ -1,0 +1,8 @@
+*.log
+.DS_Store
+/.superpowers/
+/addon/ForeverLog/ForeverLog_Plan.lua
+/scratch/
+node_modules/
+/dist/
+/docs/superpowers/

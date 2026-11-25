@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" role="img" aria-label="Forever Companion">
+  <title>Forever Companion</title>
+  <rect x="2" y="2" width="756" height="196" rx="16" fill="#0c0b0e" stroke="#8a6a2e" stroke-width="2"/>
+  <g transform="translate(28 16) scale(0.64)">
+  <path d="M128 214 C92 186 54 186 22 198 L22 108 C54 96 92 96 128 124 Z M128 214 C164 186 202 186 234 198 L234 108 C202 96 164 96 128 124 Z" fill="#3a2a12" stroke="#ffd100" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M44 134 C68 126 92 130 110 142 M44 160 C68 152 92 156 110 168 M212 134 C188 126 164 130 146 142 M212 160 C188 152 164 156 146 168" fill="none" stroke="#c8a24a" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M128 14 L139 51 L176 62 L139 73 L128 110 L117 73 L80 62 L117 51 Z" fill="#ffd100"/>
+  <circle cx="190" cy="30" r="5" fill="#c8a24a"/><circle cx="66" cy="24" r="4" fill="#c8a24a"/>
+  </g>
+  <text x="218" y="104" fill="#ffd100" font-family="'Friz Quadrata TT', 'Friz Quadrata', Optima, 'Palatino Linotype', Palatino, Georgia, serif" font-size="54" font-weight="600" letter-spacing="1">Forever Companion</text>
+  <text x="220" y="144" fill="#c8a24a" font-family="'Friz Quadrata TT', 'Friz Quadrata', Optima, 'Palatino Linotype', Palatino, Georgia, serif" font-size="22">An AI book of knowledge at your side</text>
+</svg>

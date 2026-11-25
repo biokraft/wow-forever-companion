@@ -1,0 +1,17 @@
+## Interface: 16001
+## Title: |cffc8a24aForever Companion|r
+## Notes: Your AI leveling companion: records your progress for your AI and shows its plan in game (/fc).
+## Author: Forever Companion
+## Version: 0.4.0
+## IconTexture: Interface\Icons\INV_Misc_Note_01
+## SavedVariables: ForeverCompanionAccountDB
+## SavedVariablesPerCharacter: ForeverLogDB
+
+Core.lua
+Snapshot.lua
+Events.lua
+ForeverLog_Plan.lua
+Plan.lua
+Panel.lua
+Bridge.lua
+Help.lua

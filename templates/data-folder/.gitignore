@@ -1,0 +1,6 @@
+.wowf/
+*.tmp-*
+characters/*.live.json
+.DS_Store
+drafts/
+chats/

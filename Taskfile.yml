@@ -1,0 +1,36 @@
+# Developer commands. Install go-task (https://taskfile.dev), then run `task --list`.
+version: '3'
+
+tasks:
+  test:
+    desc: Root test suite (CLI, sync, Questie reader, Pi package)
+    cmds:
+      - npm test
+
+  test:overlay:
+    desc: Overlay tests, one file per node --test run; every file runs, failures are listed at the end
+    cmds:
+      - node scripts/test-overlay.js
+
+  test:addon:
+    desc: Addon tests (Lua 5.1 with a stubbed WoW API; lua, else luajit)
+    cmds:
+      - cmd: if command -v lua >/dev/null 2>&1; then lua addon/test/run.lua; else luajit addon/test/run.lua; fi
+
+  check:
+    desc: Everything CI runs, plus the privacy scan
+    cmds:
+      - task: test
+      - task: test:overlay
+      - task: test:addon
+      - node scripts/privacy-scan.js
+
+  overlay:
+    desc: Start the overlay hidden, or restart a running one
+    cmds:
+      - node bin/wowf overlay
+
+  release:build:
+    desc: Build the clean public tree and the addon zip (publishes nothing)
+    cmds:
+      - node scripts/release.js
