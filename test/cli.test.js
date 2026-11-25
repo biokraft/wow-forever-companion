@@ -316,6 +316,15 @@ test('knowledge write, list and show through the CLI', () => {
   assert.match(bad.stderr, /sources/);
 });
 
+test('init points new players to the game plan for goals and to About me for the rest', () => {
+  const out = init().stdout;
+  assert.match(out, /game plan/);
+  assert.match(out, /Plan page/);
+  assert.match(out, /set up my game plan/);
+  assert.match(out, /"About me"[^\n]*anything else/);
+  assert.doesNotMatch(out, /About me[^\n]*knows your goals/);
+});
+
 test('review: AGENTS.md holds the notes and CLAUDE.md imports it (Pi reads AGENTS.md first)', () => {
   init();
   assert.match(fs.readFileSync(path.join(dataDir, 'AGENTS.md'), 'utf8'), /About me/);

@@ -47,12 +47,12 @@ reader.
 
 ```
 <data>/
-  CLAUDE.md, AGENTS.md     the player's goals and preferences (read by the agent)
+  CLAUDE.md, AGENTS.md     "About me" and the player's notes (read by the agent; goals and build live in the game plan)
   characters/<realm>-<name>.json          latest snapshot + reminders + diagnostics
   characters/<realm>-<name>.journal.jsonl history: level, quests, loot, gear, skills, deaths, zones
   characters/<realm>-<name>.live.json     live state from the pixel strip (gitignored, overwritten, never committed)
   plans/*.json             every plan pushed to the panel
-  gameplans/<realm>-<name>.json  the character's game plan (written only by wowf gameplan write)
+  gameplans/<realm>-<name>.json  the character's game plan (written only through the same validation: wowf gameplan write or Pi's wow_gameplan)
   knowledge/*.md           researched notes: topic, sources, checked date, scope
   knowledge/progress.md    dated progress notes the overlay's agent keeps (level, zone, quests)
   drafts/                  scratch files the agent writes before pushing a plan or saving the game plan
