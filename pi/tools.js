@@ -114,7 +114,10 @@ export function wowGamePlan({ cfg, action, plan, character } = {}) {
   return guarded(() => {
     if (!cfg) return reply(NO_CONFIG);
     const slug = characterSlug(cfg, character);
-    if (action === 'write') return reply(`Game plan saved: ${writeGamePlan(cfg, slug, plan).plan.summary}`);
+    if (action === 'write') {
+      const saved = writeGamePlan(cfg, slug, plan);
+      return reply(`Game plan saved: ${saved.plan.summary}${saved.previous ? ` (the plan before it is kept as ${path.basename(saved.previous)})` : ''}`);
+    }
     const saved = readGamePlan(cfg, slug);
     return reply(saved ? gamePlanText(saved) : 'No game plan yet. Ask the player a few questions, then save one with wow_gameplan write.');
   });

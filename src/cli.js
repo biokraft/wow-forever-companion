@@ -333,7 +333,8 @@ const commands = {
     const sub = positional[1];
     if (sub === 'write') {
       const input = readJsonInput('gameplan write', 'game plan', positional[2], opts.json);
-      out(`Game plan saved: ${writeGamePlan(cfg, slug, input).plan.summary}`);
+      const saved = writeGamePlan(cfg, slug, input);
+      out(`Game plan saved: ${saved.plan.summary}${saved.previous ? ` (the plan before it is kept as ${path.basename(saved.previous)})` : ''}`);
       return 0;
     }
     if (sub === 'show') {

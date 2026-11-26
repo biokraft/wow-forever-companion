@@ -120,6 +120,9 @@ export function validateGamePlan(input) {
 }
 
 export const gamePlanFile = (cfg, slug) => path.join(cfg.dataDir, 'gameplans', `${slug}.json`);
+// The plan as it was before the last save: a save replaces the whole plan, so one that went
+// wrong (an AI that rewrote it unasked) can be taken back by hand.
+export const previousGamePlanFile = (cfg, slug) => path.join(cfg.dataDir, 'gameplans', `${slug}.previous.json`);
 
 /** The stored plan, or null when it is missing, unreadable or no longer valid. */
 export function readGamePlan(cfg, slug) {
@@ -139,9 +142,14 @@ export function writeGamePlan(cfg, slug, input, { now = Math.floor(Date.now() / 
   const plan = { ...r.plan, updatedAt: now };
   const file = gamePlanFile(cfg, slug);
   fs.mkdirSync(path.dirname(file), { recursive: true });
+  let previous = null;
+  if (fs.existsSync(file)) {
+    previous = previousGamePlanFile(cfg, slug);
+    fs.copyFileSync(file, previous);
+  }
   fs.writeFileSync(`${file}.tmp`, JSON.stringify(plan, null, 2) + '\n');
   fs.renameSync(`${file}.tmp`, file);
-  return { plan, file };
+  return { plan, file, previous };
 }
 
 /** The first milestone above the level, else the first without a level, else null. */
