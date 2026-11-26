@@ -19,8 +19,6 @@ const USAGE = `Usage: wowf <command> [options]
   setup [--yes] [--game-dir P] [--data-dir P] [--main Folder] [--no-overlay]
                                         set everything up (safe to run again); --yes never asks
   detect [--game-dir P]                 list characters and whether ForeverLog data exists
-  init --data-dir P [--game-dir P] [--main Folder]
-                                        write ~/.config/forever-companion/config.json
   sync [--quiet] [--hook] [--json]      copy ForeverLog data into the data folder
   state [--char Folder] [--json]        sync, then print the character with fresh live state merged in
   quests available [--char Folder] [--zone Name|Id ...] [--band lo,hi] [--json]
@@ -206,22 +204,6 @@ const commands = {
       out(`  ${c.folder.padEnd(28)} ${c.hasData ? 'data' : 'no data'}${cfg?.main === c.folder ? '  (main)' : ''}`);
     }
     if (!cfg) out('\nNo config yet. In the wow-forever-companion folder, run: node bin/wowf setup');
-    return 0;
-  },
-
-  init({ opts }) {
-    if (!opts['data-dir'] || opts['data-dir'] === true) throw new UsageError('init needs --data-dir <folder>');
-    if (path.resolve(opts['data-dir']) === path.resolve(os.homedir())) {
-      throw new UsageError('init: pick a dedicated folder, not your home folder (e.g. ~/wow-companion)');
-    }
-    const gameDir = opts['game-dir'] ?? findGameDir();
-    if (!gameDir) throw new UsageError('WoW: Forever not found; pass --game-dir <path to _forever_>');
-    const chars = listCharacters(gameDir);
-    const main = opts.main ?? chars.find((c) => c.hasData)?.folder ?? chars[0]?.folder ?? null;
-    const { cfg, gitFailed } = initData({ gameDir, dataDir: opts['data-dir'], main, git: Boolean(opts.git) });
-    if (gitFailed) process.stderr.write('wowf init: git init failed (is git installed?); continuing without history\n');
-    out(`Saved ${configPath()}\n  game: ${cfg.gameDir}\n  data: ${cfg.dataDir}\n  main: ${main ?? '(none yet)'}`);
-    out(`\nNext:\n  1. wowf install-addon, then restart WoW and enable Forever Companion in AddOns\n  2. log in and type /fc sync\n  3. open Claude Code or Pi in ${cfg.dataDir} and ask "what now?"\n  Your goals and build go in your game plan: set it up on the overlay's Plan page, or ask "set up my game plan".\n  Use "About me" in ${path.join(cfg.dataDir, 'CLAUDE.md')} for anything else (friends, schedule, tone).`);
     return 0;
   },
 

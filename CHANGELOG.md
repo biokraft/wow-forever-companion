@@ -32,6 +32,7 @@
   data folder and checks them again after 14 days. `wowf knowledge list` shows only your own.
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
+- `wowf init` is gone: `wowf setup` does the same and more.
 
 ## 0.4.0 (2026-11-25)
 
