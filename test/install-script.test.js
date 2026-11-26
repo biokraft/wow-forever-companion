@@ -163,17 +163,21 @@ function ps(env = {}) {
   });
 }
 
+// Windows names one folder in several ways (short names such as RUNNER~1, quotes around a
+// path with spaces), so the install folder is recognised by its last two parts.
+const winCalls = () => calls().map((c) => c.replace(/"?[A-Za-z]:\\[^"()]*\\home dir\\wow-forever-companion"?/g, '<dir>'));
+
 test('install.ps1: clones with git and starts setup in the new folder', { skip: !WIN }, () => {
   windowsShims();
   const r = ps();
-  assert.deepEqual(calls(), [`git clone ${CLONE_URL} ${dir}`, `node bin\\wowf setup --yes (in ${dir})`], r.stdout + r.stderr);
+  assert.deepEqual(winCalls(), [`git clone ${CLONE_URL} <dir>`, 'node bin\\wowf setup --yes (in <dir>)'], r.stdout + r.stderr);
 });
 
 test('install.ps1 on an existing install updates it, then runs setup again', { skip: !WIN }, () => {
   windowsShims();
   installed();
   const r = ps();
-  assert.deepEqual(calls(), [`node bin\\wowf update (in ${dir})`, `node bin\\wowf setup --yes (in ${dir})`], r.stdout + r.stderr);
+  assert.deepEqual(winCalls(), ['node bin\\wowf update (in <dir>)', 'node bin\\wowf setup --yes (in <dir>)'], r.stdout + r.stderr);
 });
 
 test('install.ps1 refuses a folder that holds something else', { skip: !WIN }, () => {
