@@ -88,3 +88,25 @@ test('links work inside lists and tables, and a half-streamed link shows as writ
   assert.match(renderMarkdown('| Source |\n|---|\n| [Guide](https://example.org/g) |'), /<td><a href=/);
   assert.equal(renderLite('[Guide](https://example.org/g'), '[Guide](https://example.org/g');
 });
+
+test('a numbered list keeps the number it was written with after a paragraph or bullets in between', () => {
+  assert.equal(renderMarkdown('1. Fly\n\nIn the city:\n\n2. Train\n3. Smelt'),
+    '<ol><li>Fly</li></ol><p>In the city:</p><ol start="2"><li>Train</li><li>Smelt</li></ol>');
+  assert.equal(renderMarkdown('4. Learn Engineering:\n- Buy a hammer\n- Make powder\n5. Learn Cooking'),
+    '<ol start="4"><li>Learn Engineering:</li></ol><ul><li>Buy a hammer</li><li>Make powder</li></ul><ol start="5"><li>Learn Cooking</li></ol>');
+  assert.equal(renderMarkdown('1. One\n2. Two'), '<ol><li>One</li><li>Two</li></ol>', 'a list from 1 needs no start');
+  assert.equal(renderMarkdown('0. Zero'), '<ol start="0"><li>Zero</li></ol>');
+});
+
+test('indented bullets nest under their numbered step, and the steps go on counting', () => {
+  assert.equal(renderMarkdown('4. Learn Engineering:\n   - Buy a hammer\n   - Make powder\n     from stone\n5. Learn Cooking\n   1. Recipe\n6. First Aid'),
+    '<ol start="4"><li>Learn Engineering:<ul><li>Buy a hammer</li><li>Make powder from stone</li></ul></li>'
+    + '<li>Learn Cooking<ol><li>Recipe</li></ol></li><li>First Aid</li></ol>');
+  assert.equal(renderMarkdown('- Bags\n  - Linen\n  - Ore\n- Bank'), '<ul><li>Bags<ul><li>Linen</li><li>Ore</li></ul></li><li>Bank</li></ul>');
+});
+
+test('a list number is never markup: only digits reach the start attribute', () => {
+  assert.equal(renderMarkdown('7) <b>x</b>'), '<ol start="7"><li>&lt;b&gt;x&lt;/b&gt;</li></ol>');
+  assert.doesNotMatch(renderMarkdown('12345678901. too long to be a step'), /<ol/);
+});
+

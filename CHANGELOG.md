@@ -39,6 +39,8 @@
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
 - `wowf init` is gone: `wowf setup` does the same and more.
+- Numbered steps in answers keep their numbers: a list no longer restarts at 1 after a
+  paragraph or bullets in between, and bullets under a step are shown under that step.
 
 ## 0.4.0 (2026-11-25)
 
