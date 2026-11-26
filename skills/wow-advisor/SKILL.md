@@ -32,7 +32,8 @@ does not do that.
   and ability the character knows, with rank, tab and whether it is passive), quest log,
   completed quest ids, reputations), plus `nudges`, `diagnostics`, `syncedAt`.
   Before you say the player has or lacks a spell, or name one in a macro, look it up in
-  `spells`. Without a `spells` list the addon is older than spell tracking: say you cannot
+  `spells`. A spell that is listed is known. One that is not listed is "not in your synced
+  spellbook": say that, and how to check in the game, rather than "you do not have it". Without a `spells` list the addon is older than spell tracking: say you cannot
   see the spellbook and ask the player to update, `/reload` and `/fc sync`.
 - `characters/<realm>-<name>.journal.jsonl`: history (level, quest_accept, quest_turnin, loot,
   equip, skill, spell, death, zone, trainer, session_money). Read the last ~50 lines, not all of it.

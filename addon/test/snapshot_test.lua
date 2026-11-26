@@ -268,3 +268,28 @@ T.run("no spellbook API at all leaves spells empty with a diagnostic", function(
   T.ok(ForeverLogDB.diagnostics.spells, "diagnostic recorded")
 end)
 
+T.run("profession abilities on their own page join the spellbook, each spell once", function()
+  local book = {
+    { "Attack", "" }, { "Charge", "Rank 1" },
+    [11] = { "Find Minerals", "" }, [12] = { "Smelting", "Apprentice" }, [13] = { "Mining", "Apprentice" },
+    [21] = { "First Aid", "Apprentice" },
+    [31] = { "Attack", "" },
+  }
+  local profs = { [3] = { "Mining", 3, 10 }, [7] = { "First Aid", 1, 20 }, [9] = { "Odd one", 1, 30 } }
+  local ns = T.loadAddon({
+    GetNumSpellTabs = function() return 1 end,
+    GetSpellTabInfo = function() return "General", nil, 0, 2 end,
+    GetSpellBookItemName = function(slot) local b = book[slot]; if b then return b[1], b[2], 5000 + slot end end,
+    GetProfessions = function() return 3, nil, nil, nil, nil, 7, 9 end,
+    GetProfessionInfo = function(id) local p = profs[id]; return p[1], nil, 40, 75, p[2], p[3] end,
+  })
+  ns.refresh()
+  local s = ForeverLogDB.snapshot.spells
+  T.eq(#s, 6)
+  T.eq(s[3].name, "Find Minerals"); T.eq(s[3].tab, "Mining"); T.eq(s[3].rank, nil)
+  T.eq(s[4].name, "Smelting"); T.eq(s[4].rank, "Apprentice")
+  T.eq(s[6].name, "First Aid"); T.eq(s[6].tab, "First Aid")
+  T.eq(ForeverLogDB.diagnostics.spells, nil)
+  _G.GetProfessions, _G.GetProfessionInfo = nil, nil
+end)
+
