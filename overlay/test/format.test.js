@@ -110,3 +110,24 @@ test('a list number is never markup: only digits reach the start attribute', () 
   assert.doesNotMatch(renderMarkdown('12345678901. too long to be a step'), /<ol/);
 });
 
+test('a fenced code block is shown as written: no heading, no emphasis, HTML escaped', () => {
+  assert.equal(renderMarkdown('Make this macro:\n```\n#showtooltip Charge\n/cast [stance:1] Charge; Battle Stance\n```\nDrag it to your bar.'),
+    '<p>Make this macro:</p><pre class="code"><code>#showtooltip Charge\n/cast [stance:1] Charge; Battle Stance</code></pre><p>Drag it to your bar.</p>');
+  assert.equal(renderMarkdown('```lua\nlocal a = "<b>" -- *not* _em_\n```'),
+    '<pre class="code"><code>local a = &quot;&lt;b&gt;&quot; -- *not* _em_</code></pre>');
+  assert.equal(renderMarkdown('~~~\n/use [@player] Linen Bandage\n~~~'), '<pre class="code"><code>/use [@player] Linen Bandage</code></pre>');
+});
+
+test('code blocks under numbered steps lose the step indent, and the steps keep their numbers', () => {
+  const text = '1. **Bandage yourself**\n   ```\n   #showtooltip Linen Bandage\n   /use [@player] Linen Bandage\n   ```\n\n2. **Charge**\n   ```\n   /cast Charge\n   ```';
+  assert.equal(renderMarkdown(text),
+    '<ol><li><strong>Bandage yourself</strong></li></ol><pre class="code"><code>#showtooltip Linen Bandage\n/use [@player] Linen Bandage</code></pre>'
+    + '<ol start="2"><li><strong>Charge</strong></li></ol><pre class="code"><code>/cast Charge</code></pre>');
+});
+
+test('a code block keeps blank lines and inner indent, and one still streaming runs to the end', () => {
+  assert.equal(renderMarkdown('```\nif x then\n\n  y()\nend\n```'), '<pre class="code"><code>if x then\n\n  y()\nend</code></pre>');
+  assert.equal(renderMarkdown('Here:\n```\n/cast Charge'), '<p>Here:</p><pre class="code"><code>/cast Charge</code></pre>');
+  assert.equal(renderMarkdown('````\n```\ninner\n```\n````'), '<pre class="code"><code>```\ninner\n```</code></pre>', 'a longer fence holds a shorter one');
+});
+

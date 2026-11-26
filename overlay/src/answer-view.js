@@ -65,3 +65,21 @@ export function workingHtml(label, sec) {
 export function nearBottom({ scrollHeight, scrollTop, clientHeight }, slack = 32) {
   return scrollHeight - scrollTop - clientHeight <= slack;
 }
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * When an answer was written, for the corner of its bubble: "12:19" today, "25 Nov 12:19" on
+ * another day, with the year when it is not this one. An answer states what was true then
+ * ("you have 63s now"), so an older one must not read as current. `at` and `now` are seconds;
+ * returns '' without a usable time. Local time, 24-hour clock.
+ */
+export function stampText(at, now = Date.now() / 1000) {
+  if (!Number.isFinite(at) || at <= 0) return '';
+  const d = new Date(at * 1000);
+  const n = new Date(now * 1000);
+  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const sameYear = d.getFullYear() === n.getFullYear();
+  if (sameYear && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()) return time;
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}${sameYear ? '' : ` ${d.getFullYear()}`} ${time}`;
+}

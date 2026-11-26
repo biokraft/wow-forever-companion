@@ -73,3 +73,22 @@ test('a stopped answer shows what the session kept, not the raw stream', () => {
   assert.deepEqual(settlePending({ raw: '', ok: true, answer: '', stopped: true }), { action: 'remove' });
   assert.deepEqual(settlePending({ raw: '<cho', ok: true, answer: '', stopped: true }), { action: 'remove' });
 });
+
+import { stampText } from '../src/answer-view.js';
+
+// Built from local dates, so the expected text is the same in every time zone.
+const sec = (...parts) => new Date(...parts).getTime() / 1000;
+
+test('an answer from today shows its time; an older one shows the day too', () => {
+  const now = sec(2026, 10, 26, 12, 50);
+  assert.equal(stampText(sec(2026, 10, 26, 12, 19), now), '12:19');
+  assert.equal(stampText(sec(2026, 10, 26, 9, 5), now), '09:05', 'two digits, 24-hour clock');
+  assert.equal(stampText(sec(2026, 10, 25, 23, 59), now), '25 Nov 23:59');
+  assert.equal(stampText(sec(2026, 9, 26, 12, 19), now), '26 Oct 12:19', 'same day number in another month');
+  assert.equal(stampText(sec(2025, 10, 26, 12, 19), now), '26 Nov 2025 12:19');
+});
+
+test('a message without a usable time gets no stamp', () => {
+  for (const at of [undefined, null, NaN, 0, -5, 'yesterday']) assert.equal(stampText(at, 1e9), '');
+});
+

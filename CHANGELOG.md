@@ -44,6 +44,10 @@
 - The chat window is a little larger the first time it opens and sits left of the minimap
   and quest tracker; the round button starts just below the minimap. A place you chose
   yourself is kept.
+- Every answer shows when it was written, so an older "you have 63s now" is not taken
+  for the present.
+- Macros and commands in answers appear in their own box, exactly as written, with a
+  **Copy** button for pasting into the game.
 
 ## 0.4.0 (2026-11-25)
 
