@@ -8,11 +8,7 @@
   <a href="https://github.com/biokraft/wow-forever-companion/actions/workflows/ci.yml"><img src="https://github.com/biokraft/wow-forever-companion/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
   <a href="https://github.com/biokraft/wow-forever-companion/releases"><img src="https://img.shields.io/github/v/release/biokraft/wow-forever-companion?color=c8a24a" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-c8a24a" alt="MIT license"></a>
-  <img src="https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&amp;logoColor=white" alt="Node 22 or newer">
-  <img src="https://img.shields.io/badge/WoW-Forever-8a6a2e" alt="WoW: Forever">
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%28beta%29-555" alt="macOS and Windows (beta)">
-  <a href="https://pi.dev"><img src="https://img.shields.io/badge/Pi-package-c8a24a" alt="Pi package"></a>
-  <img src="https://img.shields.io/badge/Claude%20Code-plugin-d97757" alt="Claude Code plugin">
 </p>
 
 Forever Companion is a free AI leveling helper for **WoW: Forever**. It reads the data its
@@ -23,49 +19,64 @@ It sends no input to the game, reads no game memory and automates nothing.
 
 <!-- Screenshot of the chat overlay over the game goes here: assets/screenshots/overlay.png -->
 
-## Requirements
-
-- **WoW: Forever** on macOS, or on Windows (beta). Windows (beta) means: the automated tests
-  run on Windows, but nobody has tried the setup on a real Windows PC yet, and live state
-  (below) is macOS only.
-- **Node.js 22 or newer.** [docs/SETUP.md](docs/SETUP.md) shows how to install it.
-- **git**, or download the project as a ZIP from GitHub instead.
-- **A terminal** to paste two lines into.
-- **An AI login**: an OpenAI, Anthropic or Google Gemini API key, an OpenRouter account, or
-  a ChatGPT account. AI providers require their users to be 18 or older. Using an AI
-  provider may cost money; that is between you and the provider.
-  The author plays with the Claude Code backend (see Advanced); the default path through
-  Pi is covered by the automated tests but gets less daily use, so reports are welcome.
-- **About 250 MB** of disk space for the chat overlay.
-- **[Questie](https://github.com/Questie/Questie)**, strongly recommended: the
-  companion reads its quest database for quest givers, routes and coordinates.
-
 ## Install
 
-On macOS, open Terminal and paste:
+**macOS:** open Terminal and paste:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/biokraft/wow-forever-companion/main/install.sh | sh
+```
+
+**Windows (beta):** open PowerShell and paste:
+
+```powershell
+irm https://raw.githubusercontent.com/biokraft/wow-forever-companion/main/install.ps1 | iex
+```
+
+That one line does the whole install:
+
+1. It checks for Node.js 22 or newer. If it is missing, it offers to install it (with
+   Homebrew on macOS, with winget on Windows) or tells you where to download it.
+2. It puts Forever Companion into the folder `wow-forever-companion` in your home folder.
+3. It starts setup, which finds the game, asks which character is your main and where to
+   keep your progress data, installs the addon and the chat overlay, and helps you sign in
+   to an AI provider.
+
+Setup asks only what it cannot find out by itself. Pasting the line again later is safe: it
+updates what is there and skips every step that is already done.
+
+What you need:
+
+- **WoW: Forever** on macOS, or on Windows (beta). Windows (beta) means: the automated tests
+  and the installer run on Windows machines in the cloud, but nobody has tried it on a real
+  Windows PC yet, and live state (below) is macOS only. Please report what you find.
+- **An AI login**: an OpenAI, Anthropic or Google Gemini API key, an OpenRouter account, or
+  a ChatGPT account. AI providers require their users to be 18 or older. Using an AI
+  provider may cost money; that is between you and the provider. The author plays with the
+  Claude Code backend (see [docs/REFERENCE.md](docs/REFERENCE.md)); the default path
+  through Pi is covered by the automated tests but gets less daily use, so reports are
+  welcome.
+- **About 250 MB** of disk space for the chat overlay.
+- **[Questie](https://github.com/Questie/Questie)**, strongly recommended: the companion
+  reads its quest database for quest givers, routes and coordinates.
+
+<details>
+<summary>Install by hand instead</summary>
+
+With [Node.js](https://nodejs.org) 22 or newer and git installed:
 
 ```bash
 git clone https://github.com/biokraft/wow-forever-companion.git
-cd wow-forever-companion && node bin/wowf setup
-```
-
-On Windows (beta), open PowerShell and paste:
-
-```powershell
-git clone https://github.com/biokraft/wow-forever-companion.git
 cd wow-forever-companion
-node bin\wowf setup
+node bin/wowf setup
 ```
 
-Setup finds the game, asks which character is your main and where to keep your progress
-data, installs the addon and the chat overlay, and helps you sign in to an AI provider. It
-asks only what it cannot find out by itself, and it is safe to run again: steps that are
-already done are skipped.
-[docs/SETUP.md](docs/SETUP.md) explains every question, and how to install Node and git.
+On Windows, type `node bin\wowf setup`. Without git, click **Code**, then **Download ZIP**
+on the [GitHub page](https://github.com/biokraft/wow-forever-companion), unpack it, open a
+terminal in that folder and run the last line. [docs/SETUP.md](docs/SETUP.md) explains
+every step and every question setup asks.
 
-No git? Click **Code**, then **Download ZIP** on the
-[GitHub page](https://github.com/biokraft/wow-forever-companion), unpack it, open a terminal in
-that folder and run `node bin/wowf setup`.
+</details>
 
 ## Let your agent install it
 
@@ -145,20 +156,17 @@ you like your answers.
 node bin/wowf update
 ```
 
-(Windows: `node bin\wowf update`.) It downloads the newest version with git, refreshes the
-overlay's packages when they changed and copies the new addon into the game. It stops
-without changing anything if you edited files in the wow-forever-companion folder. Afterwards,
-type `/reload` in the game, and if the overlay was running, run `node bin/wowf overlay`
-again to restart it.
+Run it in the wow-forever-companion folder (Windows: `node bin\wowf update`), or paste the
+install line again. It gets the newest version, refreshes the overlay's packages when they
+changed and copies the new addon into the game. Afterwards, type `/reload` in the game, and
+if the overlay was running, run `node bin/wowf overlay` again to restart it.
 
-If you downloaded a ZIP, `wowf update` tells you to download the newest ZIP from the
-releases page, unpack it in place of the old folder and run `node bin/wowf setup`. Your
-settings and progress data live elsewhere and are kept.
+In a folder made with git, update stops without changing anything if you edited files
+there. In a folder made without git, it downloads the newest files and replaces the old
+ones. Your settings and progress data live elsewhere and are kept either way.
 
-Once a day the overlay and `wowf doctor` check whether a newer version is out. When one
-is, the overlay shows "0.4.1 is out" with "run: node bin/wowf update", and `wowf doctor`
-shows "Update: 0.4.1 is available; run: node bin/wowf update". See [Privacy](#privacy) for
-what that check sends.
+Once a day the overlay and `wowf doctor` check whether a newer version is out and show one
+line when it is. See [Privacy](#privacy) for what that check sends.
 
 ## Live state (macOS, optional, off by default)
 
@@ -200,107 +208,19 @@ What leaves your computer:
   warcraft.wiki.gg, Blizzard's forums and news, Icy Veins and Method. With the default
   Pi backend, those requests name Forever Companion in their user agent, obey each site's
   robots.txt, wait a second between pages of one site, and are never retried when a site
-  blocks them. With the `claude` backend (see Advanced), Claude Code's own fetcher is used,
+  blocks them. With the `claude` backend (see [docs/REFERENCE.md](docs/REFERENCE.md)),
+  Claude Code's own fetcher is used,
   limited to the same sites, and the companion may also run web searches through Claude
   Code. Sites whose terms do not allow automated access are not fetched; the companion gives
   you the link instead.
+- **To GitHub**, when you install or update: the installer and `wowf update` download the
+  project's files. The requests carry nothing about you.
 - **To GitHub**, once a day: the update check asks GitHub's public API for the newest
   release. The request carries nothing about you. Set `"updateCheck": false` in the config
   to turn it off.
 - **To GitHub**, only when you click **Report a problem**: a bug form opens in your browser,
   filled in with the version, your operating system and the backend. Nothing is sent until
   you submit the form yourself.
-
-## Advanced
-
-### Use it from Pi or Claude Code in a terminal
-
-The overlay brings everything it needs. If you also want to ask from a terminal agent,
-install the package there and start the agent **in your data folder**:
-
-- Pi: `pi install git:github.com/biokraft/wow-forever-companion` (or `pi install ./` from the clone)
-- Claude Code: `/plugin marketplace add biokraft/wow-forever-companion`, then
-  `/plugin install forever-companion@forever-companion`
-
-Before every question the agent syncs your newest game data. Pi reads "About me" from
-`AGENTS.md` directly; Claude Code reads it through `CLAUDE.md`, which imports it.
-
-### The overlay
-
-- It starts hidden. Click the round **FC** button (drag it anywhere; it remembers) or press
-  **Alt+Space**. **Esc** closes it (on macOS focus goes straight back to the game). It never takes focus by
-  itself.
-- **Plan** switches between the chat and your game plan page: the plan card on top (fold
-  each part or the whole card; it remembers), a chat below to change it. Each character
-  has its own plan. While you have none, the chat shows a **Set up your game plan** chip.
-- **Chips** appear only when the companion asks a question with a few clear answers; they
-  vanish when you answer or type. Saved chats reopen without them.
-- **Long chats:** when a chat gets too long for the AI, the companion summarises the older
-  part for itself and the chat shows a note. You keep the full text. Type `/compact` to do
-  it right away.
-- On macOS it lives only while WoW runs: when the game closes, the button, chat and hotkey
-  disappear; when WoW starts again, the button comes back.
-- **Start at login (macOS):** `node bin/wowf overlay autostart on` adds a per-user
-  LaunchAgent (`~/Library/LaunchAgents/com.forever-companion.overlay.plist`) from the next
-  login on; `off` removes it, `status` shows it. Run it from the shell you use for Pi or
-  Claude Code: it records that PATH so `node`, `pi` and `claude` are found at login.
-- **look** attaches a screenshot of the WoW window. On macOS allow *Screen Recording* for
-  Electron once (System Settings, Privacy & Security).
-- **Backends** (`overlay.backend` in the config):
-  - `"pi"` (default): any model Pi supports. `node bin/wowf setup` sets up the login.
-  - `"claude"`: drives **your own** installed Claude Code under **your own** login, isolated from
-    your personal Claude settings. It may read your data folder, run the safe `wowf` commands,
-    search the web, fetch from WoW sites only, and write only its research notes
-    (`knowledge/*.md`) and plan drafts (`drafts/*.json`). Opt-in, for personal use. Note:
-    Anthropic's terms do not allow third-party developers to route requests through Free, Pro, Max,
-    or Ultra plan credentials on behalf of users; decide for yourself whether this mode fits
-    your use, or use Pi with an Anthropic API key instead.
-
-### Configuration
-
-`~/.config/forever-companion/config.json` (Windows: `%APPDATA%\forever-companion\config.json`),
-written by `wowf setup`:
-
-| Key | Meaning |
-|---|---|
-| `gameDir` | your `_forever_` game folder |
-| `dataDir` | your private data folder |
-| `main` | your main character's folder name, as `wowf detect` lists it |
-| `updateCheck` | `false` turns off the daily new-version check (default on) |
-| `overlay.backend` | `"pi"` or `"claude"` |
-| `overlay.model` | Pi model, e.g. `"openai/gpt-5.4-mini"` |
-| `overlay.claudeModel` | `"haiku"`, `"sonnet"`, or `"opus"` |
-| `overlay.hotkey` | default `"Alt+Space"` |
-| `overlay.button` | saved FC button position |
-| `overlay.chat` | saved place and size of the chat window |
-| `overlay.opacity` | chat window opacity, 0.4 to 1 (default 1; also a slider in the overlay) |
-
-### The `wowf` command
-
-Run it as `node bin/wowf <command>` in the wow-forever-companion folder (Windows:
-`node bin\wowf <command>`, with full paths such as `C:\Games\wow-companion` instead of `~`).
-On macOS you can put `bin/` on your PATH and type `wowf`.
-
-| Command | Use |
-|---|---|
-| `wowf setup [--yes] [--game-dir P] [--data-dir P] [--main Folder] [--no-overlay]` | set everything up; safe to run again. `--yes` never asks and skips the AI login |
-| `wowf detect` | find the game folder and characters |
-| `wowf sync` | copy the addon's saved data into the data folder (and compute reminders); shows live state when fresh |
-| `wowf state [--json]` | sync, then show the character with fresh live state merged in |
-| `wowf quests available [--zone <name>] [--band lo,hi]` | quests you can pick up now |
-| `wowf quests show <id>` | givers, turn-in, prerequisites, coordinates |
-| `wowf npc <name>` | find any NPC (trainers, vendors) with coordinates |
-| `wowf knowledge list \| show <slug>` | the research notes the companion saved for you |
-| `wowf plan write <file>` / `wowf plan show` | push a plan to the in-game panel / show the newest |
-| `wowf gameplan write <file>` / `wowf gameplan show` | save your character's game plan / show it |
-| `wowf classdata write <file>` / `wowf classdata show` | save what the companion researched about your class (armor, weapons, stat weights) / show it |
-| `wowf overlay` | start the chat overlay |
-| `wowf overlay autostart on\|off\|status` | start the overlay at login (macOS) |
-| `wowf install-addon [--link]` | install (or link, for development) the addon |
-| `wowf update` | pull the newest version, then refresh the overlay's packages and the addon |
-| `wowf doctor` | print a health report with no personal data; paste it into a bug report |
-
-How the parts fit together: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Troubleshooting
 
@@ -328,6 +248,14 @@ home folder as `~` and contains no character names, so you can paste it anywhere
 of the chat list. It opens a GitHub bug form in your browser, filled in with the version,
 your operating system and the backend. Paste the `wowf doctor` output into it. You can also
 open an issue directly on [GitHub](https://github.com/biokraft/wow-forever-companion/issues).
+
+## More
+
+- [docs/SETUP.md](docs/SETUP.md): the setup, step by step, with every question it asks.
+- [docs/REFERENCE.md](docs/REFERENCE.md): the overlay in detail, the two AI backends, the
+  config file, every `wowf` command, and using the companion from Pi or Claude Code in a
+  terminal.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the parts fit together.
 
 ## Credits and trademarks
 

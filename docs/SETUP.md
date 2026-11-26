@@ -1,13 +1,42 @@
 # Setting up Forever Companion
 
 This guide walks you through the whole setup, step by step. The short version is in the
-[README](../README.md): two lines in a terminal. Read on if you have never installed Node,
-if setup asks something you are not sure about, or if something does not work.
+[README](../README.md): one line pasted into a terminal. Read on if you want to do it by
+hand, if setup asks something you are not sure about, or if something does not work.
 
-Windows (beta): the automated tests run on Windows, but nobody has tried this setup on a
-real Windows PC yet. If something goes wrong there, please [report it](#report-a-problem).
-On Windows, type `node bin\wowf` where this guide says `node bin/wowf`, and use full paths
-such as `C:\Games\wow-companion` where it says `~`.
+Windows (beta): the automated tests and the installer run on Windows machines in the cloud,
+but nobody has tried this setup on a real Windows PC yet. If something goes wrong there,
+please [report it](#report-a-problem). On Windows, type `node bin\wowf` where this guide
+says `node bin/wowf`, and use full paths such as `C:\Games\wow-companion` where it says `~`.
+
+## The quick way
+
+macOS, in **Terminal** (in Applications, Utilities):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/biokraft/wow-forever-companion/main/install.sh | sh
+```
+
+Windows, in **PowerShell** (Start menu, type "PowerShell"):
+
+```powershell
+irm https://raw.githubusercontent.com/biokraft/wow-forever-companion/main/install.ps1 | iex
+```
+
+The line checks for Node.js, downloads Forever Companion into the folder
+`wow-forever-companion` in your home folder and starts setup. It does steps 1 and 2 below
+for you; go on reading at [step 3](#3-run-setup) for the questions setup asks.
+
+- **Node.js missing or too old:** on macOS with Homebrew, and on Windows with winget, the
+  line offers to install it; answer with Enter. Otherwise it stops and names
+  [nodejs.org](https://nodejs.org): install the LTS version (step 1), open a new terminal
+  window and paste the line again.
+- **Another folder:** on macOS put `FC_DIR="$HOME/Games/companion"` between the `|` and
+  `sh`; on Windows run `$env:FC_DIR = 'D:\Games\companion'` first.
+- **Pasting it again** updates Forever Companion and runs setup again, which skips every
+  step that is already done.
+- **What the line runs:** [install.sh](../install.sh) and [install.ps1](../install.ps1).
+  They are short; read them first if you like.
 
 ## 1. Install Node.js
 
@@ -99,7 +128,7 @@ the copy fails, close WoW and run setup again.
 
 **Chat overlay.** Setup asks "Install the chat overlay? It downloads about 250 MB." The
 overlay is the chat window that floats over the game. Answer yes unless you want to use the
-companion only from a terminal agent (see Advanced in the README). The download can take a
+companion only from a terminal agent (see [REFERENCE.md](REFERENCE.md)). The download can take a
 few minutes.
 
 **AI login.** The overlay talks to an AI through Pi, a free AI app that runs on your
@@ -173,15 +202,17 @@ both before every answer.
 node bin/wowf update
 ```
 
-This gets the newest version with git, updates the overlay's packages when they changed,
-and copies the new addon into the game. If you changed files in the forever-companion
-folder, it lists them and stops without changing anything. Afterwards, type `/reload` in
-the game, and if the overlay was running, run `node bin/wowf overlay` again to restart it.
+This gets the newest version, updates the overlay's packages when they changed, and copies
+the new addon into the game. Afterwards, type `/reload` in the game, and if the overlay was
+running, run `node bin/wowf overlay` again to restart it. Pasting the install line again
+does the same.
 
-If you downloaded a ZIP, `wowf update` explains what to do: download the newest ZIP from
-the [releases page](https://github.com/biokraft/wow-forever-companion/releases), unpack it in
-place of the old folder, and run `node bin/wowf setup`. Your settings and your data folder
-live elsewhere and are kept.
+- In a folder made with git, it pulls the newest version. If you changed files in the
+  wow-forever-companion folder, it lists them and stops without changing anything.
+- In a folder made without git (a download or an unpacked ZIP), it downloads the newest
+  files and replaces the old ones, so changes you made to them are lost.
+
+Your settings and your data folder live elsewhere and are kept either way.
 
 Once a day the overlay and `node bin/wowf doctor` ask GitHub whether a newer version is out
 and show one line when it is. The request carries nothing about you. To turn it off, add

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **One line to install.** On macOS paste one line into Terminal, on Windows one line
+  into PowerShell (both are in the README). It checks for Node.js and offers to install
+  it, downloads Forever Companion (git is no longer needed) and starts setup. Pasting it
+  again updates.
+- `wowf update` now also works in a folder made without git: it downloads the newest
+  files and replaces the old ones.
 - **Your game plan.** A **Plan** button in the chat overlay opens one page per character with
   your goal, role and build, playstyle, professions, milestones and what to skip, on a card
   whose parts fold in and out. The first time, click **Start my game plan** and the
