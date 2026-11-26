@@ -5,7 +5,7 @@ import os from 'node:os';
 import readline from 'node:readline/promises';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { loadConfig, configPath } from './config.js';
+import { loadConfig, saveConfig, configPath } from './config.js';
 import { findGameDir, isGameDir, listCharacters, addonsDir, defaultGameDirs } from './detect.js';
 import { syncAll, formatSummary } from './sync.js';
 import { installAddon, addonSourceDir } from './install-addon.js';
@@ -187,6 +187,8 @@ const commands = {
         findGameDir: () => findGameDir(), isGameDir, listCharacters, loadConfig, initData,
         addonCurrent, installAddon: (gameDir) => installAddon(gameDir),
         run: runCommand, enableAutostart, overlayDir: overlayDir(),
+        // The config exists by the AI step: the data step wrote it.
+        setBackend: (backend) => { const cfg = loadConfig(); saveConfig({ ...cfg, overlay: { ...cfg.overlay, backend } }); },
       },
     });
     return ok ? 0 : 1;

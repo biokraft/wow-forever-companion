@@ -16,8 +16,15 @@ export const AI_LOGINS = [
   { id: 'google-key', label: 'Google Gemini API key (paid tier)', args: ['auth', 'login', 'google', '--api-key'] },
   { id: 'openrouter', label: 'OpenRouter', args: ['auth', 'login', 'openrouter'] },
   { id: 'chatgpt', label: 'Sign in with ChatGPT (official flow)', args: ['auth', 'login', 'openai'] },
-  { id: 'skip', label: 'Skip (I will set up Pi myself)', args: [] },
+  { id: 'skip', label: 'Skip (I will set it up later)', args: [] },
 ];
+
+// The recommended way, offered first when Claude Code is installed: the overlay then drives
+// the player's own Claude Code under their own login. Setup starts no login for it.
+export const CLAUDE_CODE = { id: 'claude-code', label: 'Claude Code (recommended): your own Claude Code and its login' };
+const CLAUDE_INSTALL = 'Install it from https://claude.com/claude-code and sign in once by running claude in a terminal.';
+const CLAUDE_TERMS = "The overlay will run your own Claude Code under your own login, for your personal use. Note: Anthropic's terms do not allow third-party developers to route requests through Free, Pro, Max or Ultra plan logins on behalf of users; decide for yourself whether this fits your use. With an Anthropic API key, the Anthropic entry of this list works without a plan.";
+const TO_PI = 'To use another AI instead, set overlay.backend to "pi" in the config file (docs/REFERENCE.md) and run setup again.';
 
 const SETUP = 'node bin/wowf setup';
 const PI_PACKAGE = '@earendil-works/pi-coding-agent';
@@ -30,7 +37,7 @@ const LABEL = { done: 'done     ', already: 'already  ', skipped: 'skipped  ', f
 // refused. Pi is found the way doctor and the overlay find it (resolveTool), so a Pi
 // installed as an .exe works as well as the npm shim.
 const SHIMS = new Set(['npm']);
-const RESOLVED = new Set(['pi']);
+const RESOLVED = new Set(['pi', 'claude']);
 export function windowsCommandLine(cmd, args) {
   for (const a of args) {
     if (!/^[\w@./:=-]+$/.test(a)) throw new Error(`refusing to pass "${a}" through the Windows shell`);
@@ -153,7 +160,7 @@ function cleanPath(input, home) {
  *     loadConfig(): object|null, initData(o: object): { gitFailed?: boolean, created?: boolean }, addonCurrent(gameDir: string): boolean,
  *     installAddon(gameDir: string): string, enableAutostart(o: { overlayDir: string }): string, overlayDir: string,
  *     run(cmd: string, args: string[], o?: { cwd?: string, inherit?: boolean, timeoutMs?: number }): Promise<{ code: number, stdout?: string }>,
- *     readFile?(p: string): string } }} args
+ *     readFile?(p: string): string, setBackend(backend: 'claude'|'pi'): void } }} args
  * @returns {Promise<{ ok: boolean, steps: { id: string, status: 'done'|'already'|'skipped'|'failed', text: string }[] }>}
  */
 export async function runSetup({ opts = {}, io, deps }) {
@@ -316,39 +323,52 @@ export async function runSetup({ opts = {}, io, deps }) {
       const m = await run('pi', ['--list-models'], { timeoutMs: 30000 });
       return m.code === 0 && Boolean(m.stdout?.trim()) && !/No models available/i.test(m.stdout);
     };
+    const claudeWorks = async () => (await run('claude', ['--version'], { timeoutMs: 30000 })).code === 0;
     const leftToPlayer = `Run this yourself in the wow-forever-companion folder to set it up: ${SETUP}`;
+    let backend = null;
+    try { backend = deps.loadConfig()?.overlay?.backend ?? null; } catch { /* reported by the data step */ }
     let pi = await piWorks();
-    let done = false;
-    if (!pi) {
-      if (yes) {
-        record('ai', 'skipped', `AI login: Pi, the AI app the overlay talks to, is not installed. ${leftToPlayer}`);
-        done = true;
-      } else if (!(await askYesNo(`Pi, the AI app the overlay talks to, is not installed. Install it now with npm ${PI_INSTALL.join(' ')}?`, true))) {
-        record('ai', 'skipped', `AI login: Pi is not installed. Install it with npm ${PI_INSTALL.join(' ')}, then run ${SETUP} again.`);
-        done = true;
-      } else {
-        await run('npm', PI_INSTALL, { inherit: true });
-        pi = await piWorks();
-        if (!pi) {
-          record('ai', 'failed', `Pi did not install. If npm reported a permission error, your Node install does not let npm add global tools: use Pi's own installer from https://pi.dev instead, or run npm ${PI_INSTALL.join(' ')} with the rights your Node install needs. Then run ${SETUP} again.`);
-          done = true;
+    if (backend === 'claude') {
+      if (await claudeWorks()) record('ai', 'already', `AI: Claude Code. ${TO_PI}`);
+      else record('ai', 'failed', `The overlay is set to use Claude Code, but it is not installed or not on PATH. ${CLAUDE_INSTALL} Then run ${SETUP} again. ${TO_PI}`);
+    } else if (pi && await piHasLogin()) {
+      record('ai', 'already', 'AI login: Pi works and has an AI login');
+    } else if (yes) {
+      record('ai', 'skipped', pi
+        ? `AI login: Pi has no AI login yet, and setup leaves logins to you. ${leftToPlayer}`
+        : `AI login: Pi, the AI app the overlay talks to, is not installed. ${leftToPlayer}`);
+    } else {
+      // The player chooses first; Pi is installed only for a login that needs it.
+      const claude = await claudeWorks();
+      io.say(ADULT);
+      if (!claude) io.say(`Recommended: Claude Code, if you have a Claude plan. It is not installed here. ${CLAUDE_INSTALL} Then run ${SETUP} again and pick it. With an API key from another provider, pick one of these:`);
+      const skip = AI_LOGINS.at(-1);
+      const labels = [...(claude ? [CLAUDE_CODE.label] : []), ...AI_LOGINS.map((l) => l.label)];
+      const label = await io.ask('Which AI login do you want to use?', { choices: labels, fallback: skip.label });
+      const entry = AI_LOGINS.find((l) => l.label === label) ?? skip;
+      if (claude && label === CLAUDE_CODE.label) {
+        io.say(CLAUDE_TERMS);
+        try {
+          deps.setBackend('claude');
+          record('ai', 'done', `AI: Claude Code. If you never signed in, run claude in a terminal once. ${TO_PI}`);
+        } catch (e) {
+          record('ai', 'failed', `Could not save the choice (${e.message}). Run ${SETUP} again to retry.`);
         }
-      }
-    }
-    if (!done) {
-      if (await piHasLogin()) {
-        record('ai', 'already', 'AI login: Pi works and has an AI login');
-      } else if (yes) {
-        record('ai', 'skipped', `AI login: Pi has no AI login yet, and setup leaves logins to you. ${leftToPlayer}`);
+      } else if (entry === skip) {
+        record('ai', 'skipped', `AI login: skipped. Set it up later with ${SETUP}.`);
       } else {
-        io.say(ADULT);
-        const labels = AI_LOGINS.map((l) => l.label);
-        const skip = AI_LOGINS.at(-1);
-        const label = await io.ask('Which AI login do you want to use with Pi?', { choices: labels, fallback: skip.label });
-        const entry = AI_LOGINS.find((l) => l.label === label) ?? skip;
-        if (entry === skip) {
-          record('ai', 'skipped', `AI login: skipped. Set it up later with ${SETUP}.`);
-        } else {
+        let ready = pi;
+        if (!pi) {
+          if (!(await askYesNo(`${entry.label} works through Pi, a free AI app that is not installed yet. Install it now with npm ${PI_INSTALL.join(' ')}?`, true))) {
+            record('ai', 'skipped', `AI login: Pi is not installed. Install it with npm ${PI_INSTALL.join(' ')}, then run ${SETUP} again.`);
+          } else {
+            await run('npm', PI_INSTALL, { inherit: true });
+            pi = await piWorks();
+            ready = pi;
+            if (!pi) record('ai', 'failed', `Pi did not install. If npm reported a permission error, your Node install does not let npm add global tools: use Pi's own installer from https://pi.dev instead, or run npm ${PI_INSTALL.join(' ')} with the rights your Node install needs. Then run ${SETUP} again.`);
+          }
+        }
+        if (ready) {
           io.say(`Starting: pi ${entry.args.join(' ')}\nPi asks for your key or opens the sign-in page; what you type goes to Pi only.`);
           await run('pi', entry.args, { inherit: true });
           if (await piHasLogin()) record('ai', 'done', `AI login: ${entry.label} is ready`);
