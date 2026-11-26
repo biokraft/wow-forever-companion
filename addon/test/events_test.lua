@@ -201,3 +201,59 @@ T.run("spells learned after login are journaled; the spellbook loading at login 
   T.eq(spellEntries(), 2, "an unchanged book adds nothing")
 end)
 
+
+-- A bank of 24 slots with one stack in it, plus one bought bank bag (container 5) of 6 slots.
+local function bankWorld(state)
+  return {
+    GetContainerNumSlots = function(bag)
+      if not state.open then return 0 end
+      return bag == -1 and 24 or bag == 5 and 6 or 0
+    end,
+    GetContainerNumFreeSlots = function(bag) return bag == -1 and 23 or bag == 5 and 6 or 0 end,
+    GetContainerItemInfo = function(bag, slot)
+      if bag == -1 and slot == 3 then
+        return nil, state.count, nil, 1, nil, nil, "|cffffffff|Hitem:2770::|h[Copper Ore]|h|r", nil, nil, 2770
+      end
+    end,
+    GetItemInfo = function() return "Copper Ore", "|cffffffff|Hitem:2770::|h[Copper Ore]|h|r", 1, 10, 0, "Trade Goods", "Metal & Stone", 20, "" end,
+  }
+end
+
+T.run("opening the bank saves what is in it, with the time", function()
+  local state = { open = true, count = 14 }
+  local ns, stub = T.loadAddon(bankWorld(state))
+  T.eq(ForeverLogDB.snapshot.bank, nil, "no bank before the first visit")
+  stub.fire("BANKFRAME_OPENED")
+  local bank = ForeverLogDB.snapshot.bank
+  T.eq(#bank.items, 1); T.eq(bank.items[1].count, 14); T.eq(bank.items[1].item.id, 2770)
+  T.eq(bank.items[1].bag, -1); T.eq(bank.items[1].slot, 3)
+  T.eq(bank.slotsTotal, 30); T.eq(bank.slotsFree, 29); T.eq(bank.time, 1795600000)
+end)
+
+T.run("a change during the bank visit is saved, one after it is not", function()
+  local state = { open = true, count = 14 }
+  local ns, stub = T.loadAddon(bankWorld(state))
+  stub.fire("BANKFRAME_OPENED")
+  state.count = 20
+  stub.fire("PLAYERBANKSLOTS_CHANGED", 3); stub.fire("BAG_UPDATE", -1)
+  T.eq(ForeverLogDB.snapshot.bank.items[1].count, 14, "not before the timer")
+  stub.flushTimers()
+  T.eq(ForeverLogDB.snapshot.bank.items[1].count, 20)
+  stub.fire("BANKFRAME_CLOSED")
+  state.open = false
+  stub.fire("BAG_UPDATE", 0)
+  stub.flushTimers()
+  T.eq(ForeverLogDB.snapshot.bank.items[1].count, 20, "kept after the bank closed")
+end)
+
+T.run("a full refresh away from the bank keeps the bank that was seen", function()
+  local state = { open = true, count = 14 }
+  local ns, stub = T.loadAddon(bankWorld(state))
+  stub.fire("BANKFRAME_OPENED")
+  stub.fire("BANKFRAME_CLOSED")
+  state.open = false
+  ns.refresh()
+  T.eq(ForeverLogDB.snapshot.bank.items[1].count, 14)
+  T.eq(ns.readBank(), false, "a closed bank reads as nothing and changes nothing")
+  T.eq(#ForeverLogDB.snapshot.bank.items, 1)
+end)

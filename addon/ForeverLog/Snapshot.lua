@@ -83,15 +83,16 @@ function C.equipped(s)
   s.equipped = equipped
 end
 
-function C.bags(s)
+-- Reads the given containers: the items in them, and how many slots are free and exist.
+local function scanContainers(ids)
   local Cc = C_Container
   local numSlots = need((Cc and Cc.GetContainerNumSlots) or GetContainerNumSlots, "bag slots")
   local numFree = (Cc and Cc.GetContainerNumFreeSlots) or GetContainerNumFreeSlots
-  local bags, free, total = {}, 0, 0
-  for bag = 0, 4 do
+  local items, free, total = {}, 0, 0
+  for _, bag in ipairs(ids) do
     local n = numSlots(bag) or 0
     total = total + n
-    if numFree then free = free + (numFree(bag) or 0) end
+    if numFree and n > 0 then free = free + (numFree(bag) or 0) end
     for slot = 1, n do
       local link, count
       if Cc and Cc.GetContainerItemInfo then
@@ -102,11 +103,36 @@ function C.bags(s)
         link, count = l, c
       end
       if link then
-        bags[#bags + 1] = { bag = bag, slot = slot, count = count or 1, item = ns.itemInfo(link) }
+        items[#items + 1] = { bag = bag, slot = slot, count = count or 1, item = ns.itemInfo(link) }
       end
     end
   end
-  s.bags, s.bagSlotsFree, s.bagSlotsTotal = bags, free, total
+  return items, free, total
+end
+
+function C.bags(s)
+  s.bags, s.bagSlotsFree, s.bagSlotsTotal = scanContainers({ 0, 1, 2, 3, 4 })
+end
+
+-- The bank's containers: the bank itself, then the bags bought for it, which follow the
+-- character's own bags (one more of those on clients with a reagent bag).
+local function bankContainers()
+  local ids = { BANK_CONTAINER or -1 }
+  local first = (NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4) + 1
+  for bag = first, first + (NUM_BANKBAGSLOTS or 7) - 1 do ids[#ids + 1] = bag end
+  return ids
+end
+
+-- The game shows the bank's contents only while the bank window is open, so the bank is not
+-- one of ns.SECTIONS: Events.lua calls this during a bank visit, and the snapshot keeps what
+-- was seen then, with the time. A read that finds no slots (the bank is closed) changes
+-- nothing. Returns true when the snapshot was updated.
+function ns.readBank()
+  local db = ForeverLogDB or ns.initDB()
+  local items, free, total = scanContainers(bankContainers())
+  if total == 0 then return false end
+  db.snapshot.bank = { time = time(), items = items, slotsFree = free, slotsTotal = total }
+  return true
 end
 
 local function spellName(spellID)
