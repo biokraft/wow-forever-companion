@@ -1,6 +1,6 @@
 {
   "name": "forever-companion",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Forever Companion: a WoW: Forever leveling, questing, gear and profession advisor for any AI (Pi, Claude Code).",
   "type": "module",
   "license": "MIT",

@@ -2,31 +2,29 @@
 
 ## Unreleased
 
+## 0.5.0 (2026-11-26)
+
+**Easier to install and update**
+
 - **One line to install.** On macOS paste one line into Terminal, on Windows one line
   into PowerShell (both are in the README). It checks for Node.js and offers to install
   it, downloads Forever Companion (git is no longer needed) and starts setup. Pasting it
   again updates.
 - `wowf update` now also works in a folder made without git: it downloads the newest
   files and replaces the old ones.
+- `wowf init` is gone: `wowf setup` does the same and more.
+
+**The companion knows more about you**
+
 - **Your game plan.** A **Plan** button in the chat overlay opens one page per character with
   your goal, role and build, playstyle, professions, milestones and what to skip, on a card
   whose parts fold in and out. The first time, click **Start my game plan** and the
   companion asks a few questions, one at a time. Every answer then follows the plan, and the
   companion says so when something you ask goes against it and offers to update it. From a
   terminal agent, ask "set up my game plan"; `wowf gameplan show` prints it.
-- **Reply chips.** When the companion asks a question with a few likely answers, it offers
-  them as chips above the input: click one to answer, or tick several and click
-  **Send these**. You can always type instead.
-- **Stop.** While the companion answers, a **Stop** button ends the answer. The chat keeps
-  what was written so far, and your next question goes on in the same conversation.
-- The chat window opens where you left it, at the size you gave it.
-- When another app holds the key that opens the chat, the chat says so and names the
-  setting to change; the round button's tooltip names the key you really use.
-- Commands the overlay asks you to run (on the "Almost there" page and in the new-version
-  notice) can be copied with a click.
-- Sources in answers are links now instead of raw `[text](address)`; a click opens the page
-  in your browser.
-- A failed question offers **Try again**.
+- **Your spellbook.** The addon now saves which spells and abilities your character
+  knows, profession abilities included, so the companion can check before it says you have
+  one or puts it in a macro. After updating, type `/reload` and `/fc sync` once.
 - **Upgrade reminders for every class.** The companion now researches what your class can
   wear and wield and how much each stat is worth, and saves it in your data folder
   (`wowf classdata show`). The "upgrade in bags" reminder works from that, for any class;
@@ -38,19 +36,35 @@
   data folder and checks them again after 14 days. `wowf knowledge list` shows only your own.
 - "About me" in your data folder's `AGENTS.md` now holds who you play with, when you play
   and how you like your answers; goals, build and professions moved to the game plan.
-- `wowf init` is gone: `wowf setup` does the same and more.
-- Numbered steps in answers keep their numbers: a list no longer restarts at 1 after a
-  paragraph or bullets in between, and bullets under a step are shown under that step.
-- The chat window is a little larger the first time it opens and sits left of the minimap
-  and quest tracker; the round button starts just below the minimap. A place you chose
-  yourself is kept.
-- Every answer shows when it was written, so an older "you have 63s now" is not taken
-  for the present.
+
+**The chat**
+
+- **Reply chips.** When the companion asks a question with a few likely answers, it offers
+  them as chips above the input: click one to answer, or tick several and click
+  **Send these**. You can always type instead.
+- **Stop.** While the companion answers, a **Stop** button ends the answer. The chat keeps
+  what was written so far, and your next question goes on in the same conversation.
 - Macros and commands in answers appear in their own box, exactly as written, with a
   **Copy** button for pasting into the game.
-- **Your spellbook.** The addon now saves which spells and abilities your character
-  knows, so the companion can check before it says you have one or puts it in a macro.
-  After updating, type `/reload` and `/fc sync` once.
+- Every answer shows when it was written, so an older "you have 63s now" is not taken
+  for the present.
+- Numbered steps in answers keep their numbers: a list no longer restarts at 1 after a
+  paragraph or bullets in between, and bullets under a step are shown under that step.
+- Sources in answers are links now instead of raw `[text](address)`; a click opens the page
+  in your browser.
+- A failed question offers **Try again**.
+- The chat window opens where you left it, at the size you gave it. The first time, it is
+  a little larger and sits left of the minimap and quest tracker; the round button starts
+  just below the minimap.
+- When another app holds the key that opens the chat, the chat says so and names the
+  setting to change; the round button's tooltip names the key you really use.
+- Commands the overlay asks you to run (on the "Almost there" page and in the new-version
+  notice) can be copied with a click.
+
+**Fixed**
+
+- The companion could fail to read your character when a gear slot was empty (no helmet,
+  necklace or trinket yet). It reads it again.
 
 ## 0.4.0 (2026-11-25)
 

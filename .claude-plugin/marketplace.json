@@ -8,7 +8,7 @@
     {
       "name": "forever-companion",
       "description": "WoW: Forever leveling, questing, gear, talent and profession advisor.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "source": "./"
     }
   ]
