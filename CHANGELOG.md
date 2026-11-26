@@ -48,6 +48,9 @@
   for the present.
 - Macros and commands in answers appear in their own box, exactly as written, with a
   **Copy** button for pasting into the game.
+- **Your spellbook.** The addon now saves which spells and abilities your character
+  knows, so the companion can check before it says you have one or puts it in a macro.
+  After updating, type `/reload` and `/fc sync` once.
 
 ## 0.4.0 (2026-11-25)
 

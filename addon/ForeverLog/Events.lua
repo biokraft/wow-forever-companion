@@ -122,6 +122,36 @@ function handlers.SKILL_LINES_CHANGED()
   end
 end
 
+local function knownSpells()
+  local known = {}
+  for _, sp in ipairs(ForeverLogDB.snapshot.spells or {}) do known[sp.name .. "|" .. (sp.rank or "")] = true end
+  return known
+end
+
+-- The spellbook changes at a trainer, on a level up and with a new profession. The first
+-- change after login only fills the snapshot (the client loads the book in pieces then);
+-- later ones also journal what is new.
+local spellsLoaded = false
+local function refreshSpells()
+  local before = knownSpells()
+  ns.refresh({ "spells" })
+  if not spellsLoaded then spellsLoaded = true; return end
+  for _, sp in ipairs(ForeverLogDB.snapshot.spells or {}) do
+    if not before[sp.name .. "|" .. (sp.rank or "")] then
+      ns.journalAdd("spell", { name = sp.name, rank = sp.rank, id = sp.id })
+    end
+  end
+end
+
+function handlers.SPELLS_CHANGED()
+  if pending.spells then return end
+  pending.spells = true
+  C_Timer.After(1, function()
+    pending.spells = nil
+    ns.guard("spells:changed", refreshSpells)
+  end)
+end
+
 function handlers.PLAYER_DEAD()
   ns.journalAdd("death", { zone = GetZoneText(), subzone = GetSubZoneText(), level = UnitLevel("player") })
 end

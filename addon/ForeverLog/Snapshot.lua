@@ -199,6 +199,51 @@ function C.skills(s)
   s.skills = skills
 end
 
+-- The spellbook: every spell and ability the character knows (class, general and profession
+-- tabs), so the companion can tell whether a spell is there before it names it in a macro.
+-- Spells not learned yet, pet actions and flyouts are left out.
+function C.spells(s)
+  local spells = {}
+  local function add(name, rank, id, tab, passive)
+    if not name then return end
+    spells[#spells + 1] = { name = name, rank = (rank and rank ~= "") and rank or nil, id = id, tab = tab,
+      passive = passive and true or nil }
+  end
+  local B = C_SpellBook
+  if B and B.GetNumSpellBookSkillLines and B.GetSpellBookSkillLineInfo and B.GetSpellBookItemInfo then
+    local bank = (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player) or 0
+    local SPELL = (Enum and Enum.SpellBookItemType and Enum.SpellBookItemType.Spell) or 1
+    for i = 1, B.GetNumSpellBookSkillLines() do
+      local line = B.GetSpellBookSkillLineInfo(i)
+      -- Abilities of a spec the character is not in, and guild perks, are not usable spells.
+      if line and not line.isGuild and not line.offSpecID then
+        local first = (line.itemIndexOffset or 0) + 1
+        for slot = first, first + (line.numSpellBookItems or 0) - 1 do
+          local item = B.GetSpellBookItemInfo(slot, bank)
+          if item and item.itemType == SPELL and not item.isOffSpec then
+            add(item.name, item.subName, item.spellID or item.actionID, line.name, item.isPassive)
+          end
+        end
+      end
+    end
+  else
+    local numTabs = need(GetNumSpellTabs, "spell tabs")
+    local itemName = need(GetSpellBookItemName, "spell names")
+    for tab = 1, numTabs() do
+      local tabName, _, offset, count = GetSpellTabInfo(tab)
+      for slot = (offset or 0) + 1, (offset or 0) + (count or 0) do
+        local kind, id = "SPELL", nil
+        if GetSpellBookItemInfo then kind, id = GetSpellBookItemInfo(slot, "spell") end
+        if kind == "SPELL" then
+          local name, rank, spellID = itemName(slot, "spell")
+          add(name, rank, spellID or id, tabName, IsPassiveSpell and IsPassiveSpell(slot, "spell"))
+        end
+      end
+    end
+  end
+  s.spells = spells
+end
+
 local function objective(text, done, have, need)
   if (not have or not need) and text then
     local h, n = text:match("(%d+)/(%d+)")
@@ -275,7 +320,7 @@ function C.reputations(s)
 end
 
 ns.SECTIONS = { "identity", "xp", "money", "location", "equipped", "bags", "talents", "skills",
-  "quests", "completedQuests", "reputations" }
+  "spells", "quests", "completedQuests", "reputations" }
 
 -- Defaults so a failed section still has the contract's shape.
 local EMPTY = {
@@ -283,6 +328,7 @@ local EMPTY = {
   bags = function(s) s.bags = s.bags or {}; s.bagSlotsFree = s.bagSlotsFree or 0; s.bagSlotsTotal = s.bagSlotsTotal or 0 end,
   talents = function(s) s.talents = s.talents or { unspent = 0, tabs = {} } end,
   skills = function(s) s.skills = s.skills or {} end,
+  spells = function(s) s.spells = s.spells or {} end,
   quests = function(s) s.quests = s.quests or {} end,
   completedQuests = function(s) s.completedQuests = s.completedQuests or {} end,
   reputations = function(s) s.reputations = s.reputations or {} end,
