@@ -7,7 +7,7 @@ import { ADVICE_RULES, CHOICES_RULES } from './advice-rules.js';
 import { resolveTool } from '../../src/tool-command.js';
 
 // Read-only built-ins plus the Forever Companion tools; never bash, edit or write.
-export const OVERLAY_TOOLS = ['read', 'grep', 'find', 'ls', 'wow_state', 'wow_quests', 'wow_npc', 'wow_plan_write', 'wow_gameplan', 'wow_knowledge', 'wow_web_fetch'];
+export const OVERLAY_TOOLS = ['read', 'grep', 'find', 'ls', 'wow_state', 'wow_quests', 'wow_npc', 'wow_plan_write', 'wow_gameplan', 'wow_classdata', 'wow_knowledge', 'wow_web_fetch'];
 
 // Pi keeps a session per working folder and id: the same id in the same folder continues it.
 // The last gate before the command line: anything that is not a UUID is left out.

@@ -34,6 +34,7 @@ test('tool names become plain words the player understands', () => {
   assert.equal(activityLabel('Edit'), 'Saving notes');
   assert.equal(activityLabel('wow_plan_write'), 'Writing your plan');
   assert.equal(activityLabel('wow_gameplan'), 'Saving your plan');
+  assert.equal(activityLabel('wow_classdata'), 'Checking your class');
   assert.equal(activityLabel(undefined), 'Working');
   assert.equal(activityLabel('SomethingNew'), 'Working');
 });

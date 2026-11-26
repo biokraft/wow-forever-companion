@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { writeFakeQuestie } from './helpers/questie-fixture.js';
 import { syncAll } from '../src/sync.js';
-import { wowState, wowQuests, wowNpc, wowPlanWrite, wowGamePlan } from '../pi/tools.js';
+import { wowState, wowQuests, wowNpc, wowPlanWrite, wowGamePlan, wowClassData } from '../pi/tools.js';
 import extension from '../pi/extension.js';
 
 const FIXTURE = fs.readFileSync(new URL('./fixtures/sv/ForeverLog.lua', import.meta.url), 'utf8');
@@ -251,7 +251,7 @@ test('wow_knowledge saves progress notes without frontmatter and lists them as n
 test('extension registers the knowledge and web tools too', () => {
   const pi = fakePi();
   extension(pi, { loadConfig: () => cfg });
-  assert.deepEqual(pi.calls.tools.map((t) => t.name).sort(), ['wow_gameplan', 'wow_knowledge', 'wow_npc', 'wow_plan_write', 'wow_quests', 'wow_state', 'wow_web_fetch']);
+  assert.deepEqual(pi.calls.tools.map((t) => t.name).sort(), ['wow_classdata', 'wow_gameplan', 'wow_knowledge', 'wow_npc', 'wow_plan_write', 'wow_quests', 'wow_state', 'wow_web_fetch']);
 });
 
 const page = (status, headers = {}, body = '<p>ok</p>') => ({
@@ -330,6 +330,20 @@ test('wow_gameplan writes through the same validation and shows the plan', async
   assert.ok(fs.existsSync(path.join(cfg.dataDir, 'gameplans', 'testrealm-testa-grimtusk.json')));
   assert.match(text(await wowGamePlan({ cfg, action: 'show' })), /Goal: Reach 60/);
   assert.match(text(await wowGamePlan({ cfg: null, action: 'show' })), /node bin\/wowf setup/);
+});
+
+test('wow_classdata saves class data through the same validation and shows it', async () => {
+  syncAll(cfg);
+  const warrior = JSON.parse(fs.readFileSync(new URL('./fixtures/classdata/warrior.json', import.meta.url), 'utf8'));
+  const data = { ...warrior, checked: new Date().toISOString().slice(0, 10) };
+  assert.match(text(await wowClassData({ cfg, action: 'show' })), /^Class data:/);
+  const bad = await wowClassData({ cfg, action: 'write', data: { ...data, classFile: 'MAGE' } });
+  assert.equal(bad.details.error, true, 'data for another class is refused');
+  assert.ok(!fs.existsSync(path.join(cfg.dataDir, 'classdata')), 'nothing saved');
+  assert.match(text(await wowClassData({ cfg, action: 'write', data })), /^Class data saved for WARRIOR \(checked \d{4}-\d{2}-\d{2}\)\.$/);
+  assert.ok(fs.existsSync(path.join(cfg.dataDir, 'classdata', 'warrior.json')));
+  assert.match(text(await wowClassData({ cfg, action: 'show' })), /Two-Handed Axes/);
+  assert.match(text(await wowClassData({ cfg: null, action: 'show' })), /node bin\/wowf setup/);
 });
 
 test('wow_state text includes the game plan', async () => {

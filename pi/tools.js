@@ -5,7 +5,7 @@ import { readCharacter, questsAvailable, questShow, npcSearch, writePlan, charac
 import { writeGamePlan, readGamePlan, gamePlanLine, gamePlanText } from '../src/gameplan.js';
 import { listKnowledge, readKnowledge, writeKnowledge } from '../src/knowledge.js';
 import { livePlace } from '../src/live.js';
-import { classDataLine } from '../src/classdata.js';
+import { classDataLine, classDataStatus, classDataText, readClassData, writeClassData } from '../src/classdata.js';
 import { USER_AGENT, createGate, looksBlocked } from './fetch-manners.js';
 
 const reply = (text, details = {}) => ({ content: [{ type: 'text', text }], details });
@@ -116,6 +116,22 @@ export function wowGamePlan({ cfg, action, plan, character } = {}) {
     if (action === 'write') return reply(`Game plan saved: ${writeGamePlan(cfg, slug, plan).plan.summary}`);
     const saved = readGamePlan(cfg, slug);
     return reply(saved ? gamePlanText(saved) : 'No game plan yet. Ask the player a few questions, then save one with wow_gameplan write.');
+  });
+}
+
+// Researched data for the character's class (classdata.js): show it, or save it through the
+// same validation as `wowf classdata write`. The class is the character's own.
+export function wowClassData({ cfg, action, data, character } = {}) {
+  return guarded(() => {
+    if (!cfg) return reply(NO_CONFIG);
+    const cls = readCharacter(cfg, character, { live: false }).snapshot.classFile;
+    if (action === 'write') {
+      const saved = writeClassData(cfg, cls, data).data;
+      return reply(`Class data saved for ${saved.classFile} (checked ${saved.checked}).`);
+    }
+    const saved = readClassData(cfg, cls);
+    const line = classDataLine(cls, classDataStatus(cfg, cls));
+    return reply(saved ? `${classDataText(saved)}\n${line}` : line);
   });
 }
 

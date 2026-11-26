@@ -1,11 +1,11 @@
 // Forever Companion for Pi (https://pi.dev): syncs ForeverLog data before each prompt and gives
-// the model four tools. Plain ESM so Pi loads it without a build step.
+// the model its Forever Companion tools. Plain ESM so Pi loads it without a build step.
 //
 // Spike findings (Pi 1.6.0, 2026-11-25): .js extensions load via -e or the package manifest;
 // tool parameters accept plain JSON Schema; before_agent_start may return a message that is
 // stored in the session and sent to the model.
 import { loadConfig as defaultLoadConfig } from '../src/config.js';
-import { wowState, wowQuests, wowNpc, wowPlanWrite, wowGamePlan, wowKnowledge, wowWebFetch, syncSummary } from './tools.js';
+import { wowState, wowQuests, wowNpc, wowPlanWrite, wowGamePlan, wowClassData, wowKnowledge, wowWebFetch, syncSummary } from './tools.js';
 import { readCharacter } from '../src/core.js';
 import { liveLine } from '../src/live.js';
 import { gamePlanLine } from '../src/gameplan.js';
@@ -49,6 +49,12 @@ export default function foreverCompanion(pi, { loadConfig = defaultLoadConfig } 
     }, ['action']),
     (c, p) => wowGamePlan({ cfg: c, action: p.action, plan: p.plan }));
 
+  tool('wow_classdata', 'WoW class data', 'Show what is saved about the character\'s class (action "show") or save researched class data (action "write" with data: classFile, checked YYYY-MM-DD, sources, armor, armorFrom40, weapons, statWeights, dualWieldLevel, note; see the wow-advisor skill). The upgrade reminders are worked out from it. Invalid data is refused with every reason and the old data is kept.',
+    obj({
+      action: { type: 'string', enum: ['show', 'write'] },
+      data: { type: 'object', description: 'The whole class data for action "write" (it replaces the old one)' },
+    }, ['action']),
+    (c, p) => wowClassData({ cfg: c, action: p.action, data: p.data }));
   tool('wow_knowledge', 'WoW knowledge', 'List, show, or save researched notes (markdown with frontmatter: topic, sources, checked YYYY-MM-DD, scope). Cached notes live in the player\'s data folder; entries older than 14 days are stale. Slug "progress" holds the player\'s dated progress notes: no frontmatter needed, never stale.',
     obj({
       action: { type: 'string', enum: ['list', 'show', 'write'] },
