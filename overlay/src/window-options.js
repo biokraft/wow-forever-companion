@@ -1,5 +1,4 @@
 // BrowserWindow settings for the overlay. Pure, so it can be tested without Electron.
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const COLLAPSED_HEIGHT = 36;
@@ -36,7 +35,6 @@ export function applyOverlayLevel(win) {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 }
 
-export const overlayRoot = path.dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
 
 export const BUTTON_SIZE = 46;
 
