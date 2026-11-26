@@ -141,6 +141,18 @@ test('empty realm falls back to the realm part of the character folder name', ()
   assert.equal(snap.realm, 'Ashmantle');
 });
 
+test('empty gear slots the game writes as nil are left out, so every equipped entry is an item', () => {
+  // As the game saves a character with nothing on head, neck and shoulder and a ring gap:
+  // positional entries with nil for the empty slots, then keyed ones.
+  const table = 'nil,\nnil,\nnil,\n{\n["id"] = 104,\n["name"] = "Shirt",\n},\n[16] = {\n["id"] = 116,\n["name"] = "Axe",\n},\n';
+  writeSv(FIXTURE.replace(/\["equipped"\] = \{\n\[16\] = \{[\s\S]*?\n\},\n\},\n\},\n/, `["equipped"] = {\n${table}},\n`), 1795600000);
+  syncAll(cfg, { now: NOW });
+  const snap = JSON.parse(fs.readFileSync(charJson(), 'utf8'));
+  assert.deepEqual(Object.keys(snap.equipped).sort(), ['16', '4']);
+  assert.equal(snap.equipped['4'].name, 'Shirt');
+  assert.ok(Object.values(snap.equipped).every((it) => it && typeof it === 'object'));
+});
+
 test('review: equipped with contiguous slots 1..3 stays an object keyed by slot id', () => {
   const slots = [1, 2, 3].map((n) => `[${n}] = {\n["id"] = ${100 + n},\n["name"] = "Item ${n}",\n},\n`).join('');
   writeSv(FIXTURE.replace(/\["equipped"\] = \{\n\[16\] = \{[\s\S]*?\n\},\n\},\n\},\n/, `["equipped"] = {\n${slots}},\n`), 1795600000);

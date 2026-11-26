@@ -28,10 +28,15 @@ does not do that.
 - `knowledge/progress.md` in the data folder, if it exists: progress notes written from the
   overlay. Read it right after `CLAUDE.md`; where the two disagree, the newer dated note wins.
 - `characters/<realm>-<name>.json`: latest snapshot (level, XP, rested, money, zone, x/y,
-  equipped and bag items with stats, talents, skills, quest log, completed quest ids,
-  reputations), plus `nudges`, `diagnostics`, `syncedAt`.
+  equipped and bag items with stats, talents, skills, `spells` (the spellbook: every spell
+  and ability the character knows, with rank, tab and whether it is passive), quest log,
+  completed quest ids, reputations), plus `nudges`, `diagnostics`, `syncedAt`.
+  Before you say the player has or lacks a spell, or name one in a macro, look it up in
+  `spells`. A spell that is listed is known. One that is not listed is "not in your synced
+  spellbook": say that, and how to check in the game, rather than "you do not have it". Without a `spells` list the addon is older than spell tracking: say you cannot
+  see the spellbook and ask the player to update, `/reload` and `/fc sync`.
 - `characters/<realm>-<name>.journal.jsonl`: history (level, quest_accept, quest_turnin, loot,
-  equip, skill, death, zone, trainer, session_money). Read the last ~50 lines, not all of it.
+  equip, skill, spell, death, zone, trainer, session_money). Read the last ~50 lines, not all of it.
 
 ## How to reach the data (depends on the harness)
 
@@ -100,7 +105,7 @@ each prompt from the Claude Code hook and `wowf sync`; before each turn in Pi) a
   quest progress. Do not ask for `/fc sync` to refresh those. When the line says "quest
   progress from last sync", the whole quest log was not read live yet: that part is the
   snapshot's.
-- Gear, bags, talents, skills, reputations and completed quests still come only from the
+- Gear, bags, talents, skills, spells, reputations and completed quests still come only from the
   snapshot and need `/fc sync` to refresh.
 - A quest that left the log (`leftLog: true`, "left the log") was turned in or abandoned; the
   next sync confirms which. Say that; never call it ready to turn in or count it done.

@@ -362,3 +362,27 @@ test('the wow_gameplan tool takes an action and a plan object', async () => {
   assert.equal(tool.parameters.properties.plan.type, 'object');
   assert.match(text(await tool.execute('id', { action: 'write', plan: gamePlan })), /Fury warrior/);
 });
+
+test('the state text lists the spellbook once per spell, with the highest rank', async () => {
+  const { spellsLine } = await import('../pi/tools.js');
+  const spells = [
+    { name: 'Attack', tab: 'General' }, { name: 'Find Minerals', tab: 'General' },
+    { name: 'Heroic Strike', rank: 'Rank 1', tab: 'Arms' }, { name: 'Heroic Strike', rank: 'Rank 2', tab: 'Arms' },
+    { name: 'Parry', passive: true, tab: 'Protection' },
+  ];
+  assert.equal(spellsLine(spells), 'Spells known (4): Attack, Find Minerals, Heroic Strike (Rank 2), Parry');
+});
+
+test('without a spell list the state text says the addon is older, instead of implying no spells', async () => {
+  const { spellsLine } = await import('../pi/tools.js');
+  assert.match(spellsLine(undefined), /not in this snapshot/);
+  assert.match(spellsLine(undefined), /\/reload and \/fc sync/);
+  assert.match(spellsLine([]), /none recorded yet/);
+});
+
+test('the state text survives an older snapshot whose empty gear slots are null', async () => {
+  const { stateText } = await import('../pi/tools.js');
+  const text = stateText({ name: 'Testa', level: 13, equipped: { 1: null, 4: { name: 'Shirt' }, 16: { name: 'Axe' } } }, '/data/characters/x.json', 1795600000);
+  assert.match(text, /Equipped: 4:Shirt, 16:Axe/);
+});
+

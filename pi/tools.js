@@ -22,6 +22,17 @@ async function guarded(fn) {
 const pct = (s) => (s.xpMax > 0 ? Math.floor((s.xp / s.xpMax) * 100) : 0);
 const ago = (sec) => (sec < 90 ? `${sec}s` : sec < 5400 ? `${Math.round(sec / 60)} min` : `${Math.round(sec / 3600)} h`);
 
+// The spellbook in one line: each spell once, with its highest rank as the book lists it.
+// A snapshot from an addon older than the spellbook has no `spells` at all; say so, so the
+// companion asks for an update instead of guessing what the character knows.
+export function spellsLine(spells) {
+  if (!Array.isArray(spells)) return 'Spells: not in this snapshot (the addon is older than spell tracking: update, then /reload and /fc sync).';
+  const byName = new Map();
+  for (const sp of spells) if (sp?.name) byName.set(sp.name, sp.rank ?? null);
+  if (!byName.size) return 'Spells: none recorded yet (type /fc sync in the game).';
+  return `Spells known (${byName.size}): ${[...byName].map(([name, rank]) => (rank ? `${name} (${rank})` : name)).join(', ')}`;
+}
+
 export function stateText(s, file, now = Math.floor(Date.now() / 1000)) {
   const first = String(s.name ?? '?').split(/\s+/)[0];
   // With live state (readCharacter merged it) the place is the live zone and position.
@@ -44,11 +55,13 @@ export function stateText(s, file, now = Math.floor(Date.now() / 1000)) {
   const status = (q) => (q.leftLog ? ' (left the log: turned in or abandoned, confirmed at next sync)' : q.complete ? ' (ready to turn in)' : '');
   const quests = (s.quests ?? []).map((q) => `- ${q.title} #${q.id}${status(q)}${(q.objectives ?? []).length ? `: ${q.objectives.map((o) => o.text).join('; ')}` : ''}`);
   if (quests.length) lines.push('Quest log:', ...quests);
-  const gear = Object.entries(s.equipped ?? {}).map(([slot, it]) => `${slot}:${it.name}`).join(', ');
+  // Snapshots written before sync dropped empty slots can hold null entries.
+  const gear = Object.entries(s.equipped ?? {}).filter(([, it]) => it).map(([slot, it]) => `${slot}:${it.name}`).join(', ');
   if (gear) lines.push(`Equipped: ${gear}`);
   lines.push(`Bags: ${s.bagSlotsFree ?? '?'} of ${s.bagSlotsTotal ?? '?'} slots free.`);
   const skills = (s.skills ?? []).filter((k) => k.kind !== 'other').map((k) => `${k.name} ${k.rank}/${k.max}`).join(', ');
   if (skills) lines.push(`Skills: ${skills}`);
+  lines.push(spellsLine(s.spells));
   // The player's own research notes, next to characters/ in the data folder.
   lines.push(`Full snapshot: ${file}`, `Knowledge notes: ${path.resolve(path.dirname(file), '..', 'knowledge')}`);
   return lines.join('\n');

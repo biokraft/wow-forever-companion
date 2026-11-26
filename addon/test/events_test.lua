@@ -171,3 +171,33 @@ T.run("review: an event the client does not know does not break the addon", func
   stubMod.fire("PLAYER_LEVEL_UP", 7)
   T.eq(ForeverLogDB.journal[#ForeverLogDB.journal].kind, "level")
 end)
+
+T.run("spells learned after login are journaled; the spellbook loading at login is not", function()
+  local book = { { "Attack", "" }, { "Heroic Strike", "Rank 1" } }
+  local ns, stub = T.loadAddon({
+    GetNumSpellTabs = function() return 1 end,
+    GetSpellTabInfo = function() return "General", nil, 0, #book end,
+    GetSpellBookItemName = function(slot) return book[slot][1], book[slot][2], 1000 + slot end,
+  })
+  local function spellEntries()
+    local n = 0
+    for _, e in ipairs(ForeverLogDB.journal) do if e.kind == "spell" then n = n + 1 end end
+    return n
+  end
+  stub.fire("SPELLS_CHANGED"); stub.fire("SPELLS_CHANGED")
+  stub.flushTimers()
+  T.eq(#ForeverLogDB.snapshot.spells, 2)
+  T.eq(spellEntries(), 0, "the book filling at login is not news")
+  book[#book + 1] = { "Heroic Strike", "Rank 2" }
+  book[#book + 1] = { "Find Minerals", "" }
+  stub.fire("SPELLS_CHANGED")
+  T.eq(#ForeverLogDB.snapshot.spells, 2, "debounced: nothing before the timer")
+  stub.flushTimers()
+  T.eq(#ForeverLogDB.snapshot.spells, 4)
+  T.eq(spellEntries(), 2)
+  local e = ForeverLogDB.journal[#ForeverLogDB.journal]
+  T.eq(e.kind, "spell"); T.eq(e.data.name, "Find Minerals"); T.eq(e.data.rank, nil)
+  stub.fire("SPELLS_CHANGED"); stub.flushTimers()
+  T.eq(spellEntries(), 2, "an unchanged book adds nothing")
+end)
+

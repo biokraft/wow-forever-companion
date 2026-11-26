@@ -64,27 +64,22 @@ function add(kind, text, at) {
   return div;
 }
 
-// A finished answer gets, top right, a Copy button for its text as written (shown on hover)
-// and the time it was written, so an old "you have 63s now" does not read as current.
+// A finished answer gets a Copy button on each code block and, top right, the time it was
+// written, so an old "you have 63s now" does not read as current.
 function addActions(bubble) {
   if (!bubble.dataset.raw) return;
   // Each code block (a macro to paste into the game) has its own Copy for just that block.
   for (const pre of bubble.querySelectorAll('pre.code')) {
     pre.append(copyButton(pre.querySelector('code')?.textContent ?? ''));
   }
-  const box = document.createElement('div');
-  box.className = 'msg-actions';
-  box.append(copyButton(bubble.dataset.raw));
   const at = Number(bubble.dataset.at);
   const stamp = stampText(at);
-  if (stamp) {
-    const time = document.createElement('time');
-    time.className = 'msg-time';
-    time.textContent = stamp;
-    time.title = `Written ${new Date(at * 1000).toLocaleString()}`;
-    box.append(time);
-  }
-  bubble.append(box);
+  if (!stamp) return;
+  const time = document.createElement('time');
+  time.className = 'msg-time';
+  time.textContent = stamp;
+  time.title = `Written ${new Date(at * 1000).toLocaleString()}`;
+  bubble.append(time);
 }
 
 // Under a failed question: asks it again with one click.

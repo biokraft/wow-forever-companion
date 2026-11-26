@@ -199,6 +199,80 @@ function C.skills(s)
   s.skills = skills
 end
 
+-- The spellbook: every spell and ability the character knows (class, general and profession
+-- pages), so the companion can tell whether a spell is there before it names it in a macro.
+-- Spells not learned yet, pet actions and flyouts are left out.
+function C.spells(s)
+  local spells, seen = {}, {}
+  local function add(name, rank, id, tab, passive)
+    -- The client pads some ranks ("Apprentice ").
+    rank = rank and rank:match("^%s*(.-)%s*$")
+    rank = (rank and rank ~= "") and rank or nil
+    local key = name and (name .. "|" .. (rank or ""))
+    if not name or seen[key] then return end
+    seen[key] = true
+    spells[#spells + 1] = { name = name, rank = rank, id = id, tab = tab, passive = passive and true or nil }
+  end
+
+  -- One spellbook slot: name, rank, id and passive of a known spell; nothing for anything else.
+  local readSlot
+  local B = C_SpellBook
+  local modern = B and B.GetNumSpellBookSkillLines and B.GetSpellBookSkillLineInfo and B.GetSpellBookItemInfo
+  if modern then
+    local bank = (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player) or 0
+    local SPELL = (Enum and Enum.SpellBookItemType and Enum.SpellBookItemType.Spell) or 1
+    readSlot = function(slot)
+      local item = B.GetSpellBookItemInfo(slot, bank)
+      if item and item.itemType == SPELL and not item.isOffSpec then
+        return item.name, item.subName, item.spellID or item.actionID, item.isPassive
+      end
+    end
+  else
+    local itemName = need(GetSpellBookItemName, "spell names")
+    readSlot = function(slot)
+      local kind, id = "SPELL", nil
+      if GetSpellBookItemInfo then kind, id = GetSpellBookItemInfo(slot, "spell") end
+      if kind ~= "SPELL" then return end
+      local name, rank, spellID = itemName(slot, "spell")
+      return name, rank, spellID or id, IsPassiveSpell and IsPassiveSpell(slot, "spell")
+    end
+  end
+  local function addRange(offset, count, tab)
+    for slot = (offset or 0) + 1, (offset or 0) + (count or 0) do
+      local name, rank, id, passive = readSlot(slot)
+      add(name, rank, id, tab, passive)
+    end
+  end
+
+  if modern then
+    for i = 1, B.GetNumSpellBookSkillLines() do
+      local line = B.GetSpellBookSkillLineInfo(i)
+      -- Abilities of a spec the character is not in, and guild perks, are not usable spells.
+      if line and not line.isGuild and not line.offSpecID then
+        addRange(line.itemIndexOffset, line.numSpellBookItems, line.name)
+      end
+    end
+  else
+    for tab = 1, need(GetNumSpellTabs, "spell tabs")() do
+      local tabName, _, offset, count = GetSpellTabInfo(tab)
+      addRange(offset, count, tabName)
+    end
+  end
+
+  -- Clients with a separate Professions page keep those abilities (Find Minerals, Smelting,
+  -- First Aid) outside the spell tabs; each profession names its own run of spellbook slots.
+  if GetProfessions and GetProfessionInfo then
+    local ids = { GetProfessions() }
+    for i = 1, table.maxn(ids) do
+      if ids[i] then
+        local name, _, _, _, count, offset = GetProfessionInfo(ids[i])
+        addRange(offset, count, name)
+      end
+    end
+  end
+  s.spells = spells
+end
+
 local function objective(text, done, have, need)
   if (not have or not need) and text then
     local h, n = text:match("(%d+)/(%d+)")
@@ -275,7 +349,7 @@ function C.reputations(s)
 end
 
 ns.SECTIONS = { "identity", "xp", "money", "location", "equipped", "bags", "talents", "skills",
-  "quests", "completedQuests", "reputations" }
+  "spells", "quests", "completedQuests", "reputations" }
 
 -- Defaults so a failed section still has the contract's shape.
 local EMPTY = {
@@ -283,6 +357,7 @@ local EMPTY = {
   bags = function(s) s.bags = s.bags or {}; s.bagSlotsFree = s.bagSlotsFree or 0; s.bagSlotsTotal = s.bagSlotsTotal or 0 end,
   talents = function(s) s.talents = s.talents or { unspent = 0, tabs = {} } end,
   skills = function(s) s.skills = s.skills or {} end,
+  spells = function(s) s.spells = s.spells or {} end,
   quests = function(s) s.quests = s.quests or {} end,
   completedQuests = function(s) s.completedQuests = s.completedQuests or {} end,
   reputations = function(s) s.reputations = s.reputations or {} end,

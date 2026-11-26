@@ -32,7 +32,7 @@ reader.
 
 | Part | Where | What it does |
 |---|---|---|
-| ForeverLog addon | `addon/ForeverLog/` | Records a snapshot (level, XP, gear, bags, talents, skills, quests, completed quests, reputations) and a journal of events in SavedVariables; shows the plan panel; `/fc`. Event-driven, never throws, probes modern and classic APIs. |
+| ForeverLog addon | `addon/ForeverLog/` | Records a snapshot (level, XP, gear, bags, talents, skills, spells, quests, completed quests, reputations) and a journal of events in SavedVariables; shows the plan panel; `/fc`. Event-driven, never throws, probes modern and classic APIs. |
 | `wowf` CLI | `bin/wowf`, `src/` | Parses SavedVariables, writes JSON + journal into the data folder, computes reminders, reads Questie's baked database (CBOR in the `.toc`), validates and emits plans as Lua, manages the knowledge cache. Zero runtime dependencies. |
 | Install, setup and update | `install.sh`, `install.ps1`, `src/setup.js`, `src/update.js`, `src/update-archive.js`, `src/doctor.js`, `src/update-check.js` | The one-line installers check for Node, get the code (git clone, or a download when git is missing) and start setup. `wowf setup` takes a fresh copy to a working install (config, data folder, addon, overlay packages, Pi login offer); every step checks first, so it is safe to run again. `wowf update` pulls with `--ff-only` in a clone and downloads the main branch over the old files elsewhere, then refreshes the overlay packages and the addon. `wowf doctor` prints a health report without personal data. The overlay and `doctor` ask GitHub for the newest release once a day. Player guide: [SETUP.md](SETUP.md); agent guide: [AGENT-INSTALL.md](AGENT-INSTALL.md). |
 | Skills | `skills/` | `wow-advisor` (how to answer; follows the game plan), `wow-checkin` (quick status), `wow-gameplan` (the game plan interview and later changes), `wow-setup` (first run around `wowf setup`). Agent Skills format, used by Pi and Claude Code. |
@@ -49,7 +49,7 @@ reader.
 <data>/
   CLAUDE.md, AGENTS.md     "About me" and the player's notes (read by the agent; goals and build live in the game plan)
   characters/<realm>-<name>.json          latest snapshot + reminders + diagnostics
-  characters/<realm>-<name>.journal.jsonl history: level, quests, loot, gear, skills, deaths, zones
+  characters/<realm>-<name>.journal.jsonl history: level, quests, loot, gear, skills, spells, deaths, zones
   characters/<realm>-<name>.live.json     live state from the pixel strip (gitignored, overwritten, never committed)
   plans/*.json             every plan pushed to the panel
   classdata/<class>.json   what the class wears, wields and values, researched by the agent (written only through wowf classdata write)

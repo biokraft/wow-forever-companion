@@ -207,3 +207,89 @@ T.run("duplicate skill lines are listed once", function()
   ns.refresh()
   T.eq(#ForeverLogDB.snapshot.skills, 1)
 end)
+
+T.run("classic spellbook: known spells with rank, tab and passive; future spells are left out", function()
+  local book = {
+    { "SPELL", "Attack", "", 6603 }, { "SPELL", "Find Minerals", "", 2580 },
+    { "SPELL", "Heroic Strike", "Rank 2", 284 }, { "FUTURESPELL", "Cleave", "", 845 }, { "SPELL", "Parry", "Passive", 3127, true },
+  }
+  local ns = T.loadAddon({
+    GetNumSpellTabs = function() return 2 end,
+    GetSpellTabInfo = function(tab) if tab == 1 then return "General", nil, 0, 2 end return "Arms", nil, 2, 3 end,
+    GetSpellBookItemInfo = function(slot) return book[slot][1], book[slot][4] end,
+    GetSpellBookItemName = function(slot) return book[slot][2], book[slot][3], book[slot][4] end,
+    IsPassiveSpell = function(slot) return book[slot][5] or false end,
+  })
+  ns.refresh()
+  local s = ForeverLogDB.snapshot.spells
+  T.eq(#s, 4)
+  T.eq(s[1].name, "Attack"); T.eq(s[1].rank, nil); T.eq(s[1].tab, "General"); T.eq(s[1].id, 6603); T.eq(s[1].passive, nil)
+  T.eq(s[2].name, "Find Minerals")
+  T.eq(s[3].name, "Heroic Strike"); T.eq(s[3].rank, "Rank 2"); T.eq(s[3].tab, "Arms")
+  T.eq(s[4].name, "Parry"); T.eq(s[4].passive, true)
+  T.eq(ForeverLogDB.diagnostics.spells, nil)
+end)
+
+T.run("modern C_SpellBook is preferred: off-spec and guild lines, future spells and flyouts are left out", function()
+  local lines = {
+    { name = "General", itemIndexOffset = 0, numSpellBookItems = 2 },
+    { name = "Warrior", itemIndexOffset = 2, numSpellBookItems = 3 },
+    { name = "Fury", itemIndexOffset = 5, numSpellBookItems = 1, offSpecID = 72 },
+    { name = "Guild", itemIndexOffset = 6, numSpellBookItems = 1, isGuild = true },
+  }
+  local items = {
+    { itemType = 1, name = "Find Minerals", spellID = 2580 }, { itemType = 4, name = "Mounts" },
+    { itemType = 1, name = "Charge", subName = "Rank 1", spellID = 100 }, { itemType = 2, name = "Cleave", spellID = 845 },
+    { itemType = 1, name = "Parry", spellID = 3127, isPassive = true },
+    { itemType = 1, name = "Bloodthirst", spellID = 23881 }, { itemType = 1, name = "Mass Resurrection", spellID = 83968 },
+  }
+  local ns = T.loadAddon({ GetNumSpellTabs = false })
+  _G.GetNumSpellTabs = nil
+  _G.C_SpellBook = {
+    GetNumSpellBookSkillLines = function() return #lines end,
+    GetSpellBookSkillLineInfo = function(i) return lines[i] end,
+    GetSpellBookItemInfo = function(slot) return items[slot] end,
+  }
+  ns.refresh()
+  local s = ForeverLogDB.snapshot.spells
+  T.eq(#s, 3)
+  T.eq(s[1].name, "Find Minerals"); T.eq(s[1].tab, "General"); T.eq(s[1].id, 2580)
+  T.eq(s[2].name, "Charge"); T.eq(s[2].rank, "Rank 1"); T.eq(s[2].tab, "Warrior")
+  T.eq(s[3].name, "Parry"); T.eq(s[3].passive, true)
+  T.eq(ForeverLogDB.diagnostics.spells, nil)
+  _G.C_SpellBook = nil
+end)
+
+T.run("no spellbook API at all leaves spells empty with a diagnostic", function()
+  local ns = T.loadAddon({ GetNumSpellTabs = false })
+  _G.GetNumSpellTabs = nil
+  ns.refresh()
+  T.eq(#ForeverLogDB.snapshot.spells, 0)
+  T.ok(ForeverLogDB.diagnostics.spells, "diagnostic recorded")
+end)
+
+T.run("profession abilities on their own page join the spellbook, each spell once", function()
+  local book = {
+    { "Attack", "" }, { "Charge", "Rank 1" },
+    [11] = { "Find Minerals", "" }, [12] = { "Smelting", "Apprentice " }, [13] = { "Mining", "Apprentice" },
+    [21] = { "First Aid", "Apprentice" },
+    [31] = { "Attack", "" },
+  }
+  local profs = { [3] = { "Mining", 3, 10 }, [7] = { "First Aid", 1, 20 }, [9] = { "Odd one", 1, 30 } }
+  local ns = T.loadAddon({
+    GetNumSpellTabs = function() return 1 end,
+    GetSpellTabInfo = function() return "General", nil, 0, 2 end,
+    GetSpellBookItemName = function(slot) local b = book[slot]; if b then return b[1], b[2], 5000 + slot end end,
+    GetProfessions = function() return 3, nil, nil, nil, nil, 7, 9 end,
+    GetProfessionInfo = function(id) local p = profs[id]; return p[1], nil, 40, 75, p[2], p[3] end,
+  })
+  ns.refresh()
+  local s = ForeverLogDB.snapshot.spells
+  T.eq(#s, 6)
+  T.eq(s[3].name, "Find Minerals"); T.eq(s[3].tab, "Mining"); T.eq(s[3].rank, nil)
+  T.eq(s[4].name, "Smelting"); T.eq(s[4].rank, "Apprentice")
+  T.eq(s[6].name, "First Aid"); T.eq(s[6].tab, "First Aid")
+  T.eq(ForeverLogDB.diagnostics.spells, nil)
+  _G.GetProfessions, _G.GetProfessionInfo = nil, nil
+end)
+

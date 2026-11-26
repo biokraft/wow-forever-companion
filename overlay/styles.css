@@ -101,13 +101,9 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .msg.bot pre.code .copy { position: absolute; top: 3px; right: 3px; visibility: hidden; }
 .msg.bot pre.code:hover .copy, .msg.bot pre.code .copy:focus { visibility: visible; }
 .msg.bot blockquote { margin: 0 0 6px; padding-left: 8px; border-left: 2px solid var(--bronze); color: var(--muted); }
-/* Top right of a finished answer, on the "Companion" line: the time it was written, and
-   Copy only while pointed at */
+/* Top right of a finished answer, on the "Companion" line: the time it was written */
 .msg.bot { position: relative; }
-.msg-actions { position: absolute; top: -1px; right: 0; display: flex; align-items: baseline; gap: 6px; }
-.msg-actions .copy { visibility: hidden; }
-.msg.bot:hover .msg-actions .copy, .msg-actions:focus-within .copy { visibility: visible; }
-.msg-time { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.msg-time { position: absolute; top: 1px; right: 0; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .msg .copy { font-style: normal; }
 .msg.note { color: var(--muted); font-size: 12px; font-style: italic; }
 .msg.error { color: #ff6060; }
