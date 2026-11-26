@@ -52,12 +52,14 @@ What you need:
 - **WoW: Forever** on macOS, or on Windows (beta). Windows (beta) means: the automated tests
   and the installer run on Windows machines in the cloud, but nobody has tried it on a real
   Windows PC yet, and live state (below) is macOS only. Please report what you find.
-- **An AI login**: an OpenAI, Anthropic or Google Gemini API key, an OpenRouter account, or
-  a ChatGPT account. AI providers require their users to be 18 or older. Using an AI
-  provider may cost money; that is between you and the provider. The author plays with the
-  Claude Code backend (see [docs/REFERENCE.md](docs/REFERENCE.md)); the default path
-  through Pi is covered by the automated tests but gets less daily use, so reports are
-  welcome.
+- **An AI login.** Recommended: [Claude Code](https://claude.com/claude-code), installed
+  and signed in. It is what the author plays with every day; setup offers it first (see the
+  note on its terms in [docs/REFERENCE.md](docs/REFERENCE.md)). No Claude Code? Then an
+  API key from OpenAI, Anthropic or Google Gemini, an OpenRouter account or a ChatGPT
+  account works too, through [Pi](https://pi.dev), a free AI app that setup installs for
+  you. That way is tested, but gets less daily use, so reports are welcome. AI providers
+  require their users to be 18 or older. Using an AI provider may cost money; that is
+  between you and the provider.
 - **About 250 MB** of disk space for the chat overlay.
 - **[Questie](https://github.com/Questie/Questie)**, strongly recommended: the companion
   reads its quest database for quest givers, routes and coordinates.

@@ -9,7 +9,7 @@ player-facing guide is [SETUP.md](SETUP.md); the overview is the [README](../REA
 - You must never click or type into the game window, and never send keys to it. The player
   does everything inside the game.
 - You must never handle AI keys or logins: do not ask for an API key, do not read one from a
-  file, do not run `pi auth login`, and do not install Pi. With `--yes`, setup skips the AI
+  file, do not run `pi auth login`, do not install Pi, and do not choose Claude Code for the player. With `--yes`, setup skips the AI
   login and prints the command the player runs themselves.
 - Stop and ask the player instead of guessing. If a command fails and its message does not
   say what to do, show the player the message and ask.
@@ -132,7 +132,8 @@ Relay these steps to the player in your own words:
 
 1. **AI login** (only if the overlay was installed and `wowf doctor` showed a `FIX` line
    for AI): in the wow-forever-companion folder, run `node bin/wowf setup` themselves. It
-   offers to install Pi, the AI app the overlay talks to, and lets them pick a login. AI
+   lets them pick a login: Claude Code (recommended, when it is installed), or another
+   provider through Pi, an AI app that setup then offers to install. AI
    providers require their users to be 18 or older.
 2. **In the game:** quit WoW fully and start it again; on the character screen, click
    **AddOns** and tick **Forever Companion**; log in and type `/fc sync`.
