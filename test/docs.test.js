@@ -111,6 +111,13 @@ test('CHANGELOG keeps unreleased work in its own section above the released vers
   assert.match(headings[1]?.[0] ?? '', /^## \d+\.\d+\.\d+(?: \(\d{4}-\d{2}-\d{2}\))?$/, 'a released version follows it');
 });
 
+test('the setup guide shows the same one-line installs and links both scripts', () => {
+  const text = read('docs/SETUP.md');
+  for (const s of [`curl -fsSL ${RAW}/install.sh | sh`, `irm ${RAW}/install.ps1 | iex`, '(../install.sh)', '(../install.ps1)']) {
+    assert.ok(text.includes(s), s);
+  }
+});
+
 test('player docs say About me holds the rest and the game plan holds goals and build', () => {
   for (const doc of ['README.md', 'docs/SETUP.md', 'docs/AGENT-INSTALL.md']) {
     const text = read(doc).replace(/\s+/g, ' ');
