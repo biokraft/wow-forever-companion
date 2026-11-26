@@ -22,9 +22,11 @@ function Test-Tool([string]$Name) {
 
 function Test-Node {
   if (-not (Test-Tool 'node')) { return $false }
-  $major = & node -p 'process.versions.node.split(".")[0]' 2>$null
-  if ($LASTEXITCODE -ne 0) { return $false }
-  return ([int]$major -ge $NodeMin)
+  # Read from `node --version` ("v22.11.0"): Windows PowerShell 5.1 drops double quotes
+  # inside an argument, so a script passed to `node -p` would not arrive whole.
+  $version = & node --version 2>$null
+  if ($LASTEXITCODE -ne 0 -or "$version" -notmatch '^v(\d+)\.') { return $false }
+  return ([int]$Matches[1] -ge $NodeMin)
 }
 
 # A program installed a moment ago is found only after PATH is read again.

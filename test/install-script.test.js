@@ -142,7 +142,6 @@ function cmdShim(name, lines) {
 }
 function windowsShims({ node = '22' } = {}) {
   cmdShim('node', [
-    `if "%~1"=="-p" echo ${node}& exit /b 0`,
     `if "%~1"=="--version" echo v${node}.0.0& exit /b 0`,
     'echo node %* (in %CD%)>>"%FC_TEST_LOG%"',
     'exit /b 0',
