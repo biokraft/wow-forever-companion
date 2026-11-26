@@ -1,7 +1,7 @@
 -- ForeverLog core: saved-variable setup, guarded API calls, journal, slash command.
 local ADDON_NAME, ns = ...
 
-ns.VERSION = "0.5.0"
+ns.VERSION = "0.5.1"
 ns.SCHEMA = 1
 ns.JOURNAL_CAP = 3000
 ns.BRAND = "|cffc8a24aForever Companion|r"

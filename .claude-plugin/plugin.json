@@ -1,7 +1,7 @@
 {
   "name": "forever-companion",
   "description": "Forever Companion: a WoW: Forever leveling, questing, gear, talent and profession advisor that reads your real character data and quest database.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": {
     "name": "biokraft"
   },
