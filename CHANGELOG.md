@@ -26,7 +26,7 @@
   notice) can be copied with a click.
 - Sources in answers are links now instead of raw `[text](address)`; a click opens the page
   in your browser.
-- Point at an answer to copy it; a failed question offers **Try again**.
+- A failed question offers **Try again**.
 - **Upgrade reminders for every class.** The companion now researches what your class can
   wear and wield and how much each stat is worth, and saves it in your data folder
   (`wowf classdata show`). The "upgrade in bags" reminder works from that, for any class;
