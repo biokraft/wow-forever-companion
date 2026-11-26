@@ -32,7 +32,7 @@ let button;
 let wowUp = process.platform !== 'darwin';
 let buttonReady = false;
 let client;
-let expandedHeight = 520;
+let expandedHeight = windowOptions().height;
 let collapsed = false;
 // Pixel bridge: reads live state from the strip ForeverLog draws while WoW runs (macOS only).
 let liveReader = null;

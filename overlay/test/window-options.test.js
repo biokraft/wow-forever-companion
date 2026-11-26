@@ -10,7 +10,7 @@ test('overlay window is frameless, transparent, on top, and starts hidden', () =
   assert.equal(o.alwaysOnTop, true);
   assert.equal(o.skipTaskbar, true);
   assert.equal(o.show, false);
-  assert.deepEqual([o.width, o.height], [380, 520]);
+  assert.deepEqual([o.width, o.height], [398, 654]);
   assert.equal(o.webPreferences.contextIsolation, true);
   assert.equal(o.webPreferences.nodeIntegration, false);
 });
@@ -38,7 +38,7 @@ test('launcher button is a small, frameless, never-focused round window', () => 
 import { defaultButtonPosition, clampButton } from '../src/window-options.js';
 
 test('default button spot hugs the right edge just below the minimap zoom buttons', () => {
-  const wa = { x: 0, y: 0, width: 2560, height: 1440 };
+  const wa = { x: 0, y: 30, width: 2560, height: 1410 }; // 2560x1440 below the macOS menu bar
   const p = defaultButtonPosition(wa);
   assert.equal(p.x, 2503); // hand-placed spot on 2560x1440
   assert.equal(p.y, 278);
@@ -55,7 +55,19 @@ import { chatPosition } from '../src/window-options.js';
 test('review: the chat opens left of the launcher button, not on top of it', () => {
   const wa = { x: 0, y: 0, width: 2560, height: 1440 };
   const p = chatPosition(wa);
-  assert.ok(p.x + 380 <= defaultButtonPosition(wa).x - 8, `chat right edge ${p.x + 380}`);
+  assert.ok(p.x + windowOptions().width <= defaultButtonPosition(wa).x - 8, `chat right edge ${p.x + windowOptions().width}`);
+});
+
+test('the default chat place is the hand-set one on a 2560x1440 screen, measured from the right and top', () => {
+  assert.deepEqual(chatBounds(undefined, [{ x: 0, y: 30, width: 2560, height: 1410 }]), { x: 1860, y: 379, width: 398, height: 654 });
+  assert.deepEqual(chatBounds(undefined, [{ x: 0, y: 0, width: 1920, height: 1080 }]), { x: 1220, y: 349, width: 398, height: 654 });
+});
+
+test('on a screen too small for the default chat, it moves up and shrinks until it is fully visible', () => {
+  const small = { x: 0, y: 25, width: 1440, height: 875 };
+  assert.deepEqual(chatBounds(undefined, [small]), { x: 740, y: 246, width: 398, height: 654 });
+  const tiny = { x: 0, y: 0, width: 640, height: 480 };
+  assert.deepEqual(chatBounds(undefined, [tiny]), { x: 0, y: 0, width: 398, height: 480 });
 });
 
 test('review: renderer is sandboxed', () => {
@@ -68,7 +80,7 @@ const PRIMARY = { x: 0, y: 25, width: 2560, height: 1415 };
 const SECOND = { x: 2560, y: 0, width: 1920, height: 1080 };
 
 test('without a saved place the chat opens at its default spot and size', () => {
-  const def = { ...chatPosition(PRIMARY), width: 380, height: 520 };
+  const def = { ...chatPosition(PRIMARY), width: 398, height: 654 };
   assert.deepEqual(chatBounds(undefined, [PRIMARY]), def);
   assert.deepEqual(chatBounds({ x: 'a', y: 1, width: 380, height: 520 }, [PRIMARY]), def, 'a damaged entry is ignored');
   assert.deepEqual(chatBounds({ x: 10, y: 40, width: 380, height: Infinity }, [PRIMARY]), def);

@@ -5,8 +5,8 @@ export const COLLAPSED_HEIGHT = 36;
 
 export function windowOptions() {
   return {
-    width: 380,
-    height: 520,
+    width: 398,
+    height: 654,
     minWidth: 300,
     minHeight: COLLAPSED_HEIGHT,
     frame: false,
@@ -58,15 +58,24 @@ export function buttonOptions() {
   };
 }
 
-// Right edge, just below the minimap's zoom buttons: placed by hand during testing on
-// 2026-11-25 (57 points from the right, 278 from the top on a 2560x1440 screen).
+// The default places are the maintainer's own layout of 2026-11-26 on a 2560x1440 screen,
+// measured from the right and top edges of the usable screen area so they carry over to
+// other screen sizes.
+// Button: right edge, just below the minimap's zoom buttons.
+const BUTTON_FROM_RIGHT = 57;
+const BUTTON_FROM_TOP = 248;
+// Chat: left of the minimap and the quest tracker, clear of the button.
+const CHAT_GAP_RIGHT = 302;
+const CHAT_FROM_TOP = 349;
+
 export function defaultButtonPosition(workArea) {
-  return { x: workArea.x + workArea.width - 57, y: workArea.y + 278 };
+  return { x: workArea.x + workArea.width - BUTTON_FROM_RIGHT, y: workArea.y + BUTTON_FROM_TOP };
 }
 
-// The chat opens left of the launcher button so it never covers it or the minimap.
+// Where the chat opens the first time. On a screen too small for it, chatBounds moves and
+// shrinks it until it fits.
 export function chatPosition(workArea) {
-  return { x: workArea.x + workArea.width - 57 - 380 - 16, y: workArea.y + 80 };
+  return { x: workArea.x + workArea.width - CHAT_GAP_RIGHT - windowOptions().width, y: workArea.y + CHAT_FROM_TOP };
 }
 
 const MIN_CHAT = { width: 300, height: 200 };
@@ -83,7 +92,7 @@ export function chatBounds(saved, workAreas) {
   const [first] = workAreas;
   const { width, height } = windowOptions();
   const ok = saved && ['x', 'y', 'width', 'height'].every((k) => Number.isFinite(saved[k]));
-  if (!ok) return { ...chatPosition(first), width, height };
+  if (!ok) saved = { ...chatPosition(first), width, height };
   const inside = (a) => saved.x >= a.x && saved.x < a.x + a.width && saved.y >= a.y && saved.y < a.y + a.height;
   const area = workAreas.find(inside) ?? first;
   const w = Math.round(clamp(saved.width, MIN_CHAT.width, area.width));

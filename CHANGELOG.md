@@ -41,6 +41,9 @@
 - `wowf init` is gone: `wowf setup` does the same and more.
 - Numbered steps in answers keep their numbers: a list no longer restarts at 1 after a
   paragraph or bullets in between, and bullets under a step are shown under that step.
+- The chat window is a little larger the first time it opens and sits left of the minimap
+  and quest tracker; the round button starts just below the minimap. A place you chose
+  yourself is kept.
 
 ## 0.4.0 (2026-11-25)
 
