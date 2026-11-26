@@ -41,3 +41,48 @@ jobs:
           luaVersion: 5.1.5 # the Lua version WoW runs
       - name: Addon tests (Lua 5.1 with a stubbed WoW API)
         run: lua addon/test/run.lua
+
+  # The one-line installers, run for real: they download the main branch from GitHub (the
+  # way a player without git gets it) and run setup against a made-up game folder.
+  installer:
+    name: Installer / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    env:
+      FC_NO_GIT: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install.sh, pasted the way the README says (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          work="$RUNNER_TEMP/fc"
+          mkdir -p "$work/game/_forever_/Interface/AddOns" "$work/game/_forever_/WTF"
+          export FC_DIR="$work/app" WOWF_CONFIG="$work/config.json"
+          sh -s -- --yes --no-overlay --game-dir "$work/game/_forever_" --data-dir "$work/data" < install.sh
+          test -f "$work/app/bin/wowf"
+          test -f "$work/game/_forever_/Interface/AddOns/ForeverLog/ForeverLog.toc"
+          test -f "$work/data/AGENTS.md"
+          test -f "$work/config.json"
+      - name: install.ps1, pasted the way the README says (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $work = Join-Path $env:RUNNER_TEMP 'fc'
+          New-Item -ItemType Directory -Force -Path "$work\game\_forever_\Interface\AddOns", "$work\game\_forever_\WTF" | Out-Null
+          $env:FC_DIR = "$work\app"
+          $env:WOWF_CONFIG = "$work\config.json"
+          $env:FC_SETUP_ARGS = "--yes --no-overlay --game-dir $work\game\_forever_ --data-dir $work\data"
+          Get-Content -Raw install.ps1 | Invoke-Expression
+          foreach ($f in "$work\app\bin\wowf", "$work\game\_forever_\Interface\AddOns\ForeverLog\ForeverLog.toc", "$work\data\AGENTS.md", "$work\config.json") {
+            if (-not (Test-Path -LiteralPath $f)) { throw "missing after install: $f" }
+          }
+
