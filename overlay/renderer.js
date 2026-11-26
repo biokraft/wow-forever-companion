@@ -35,7 +35,7 @@ let introSaved = false;
 import { renderMarkdown as render } from './src/format.js';
 import { visibleHints } from './src/hint-view.js';
 import { groupChats, dateLabel } from './src/chat-groups.js';
-import { nearBottom, errorLine, settlePending, activityLabel, workingHtml, elapsedText } from './src/answer-view.js';
+import { nearBottom, errorLine, settlePending, activityLabel, workingHtml, elapsedText, stampText } from './src/answer-view.js';
 import { parseChoices, visibleText, answerFromChoices } from './src/choices.js';
 import { planCardModel, planCardHtml } from './src/plan-card.js';
 import { planPageState, canSwitch, cardMode, foldsWith, aiNoticeFor, KICKOFF, START_LABEL, INTRO_TEXT, NO_PLAN_TEXT, NO_SNAPSHOT_TEXT, NO_PLAN_CHAT_TEXT } from './src/plan-page.js';
@@ -49,12 +49,14 @@ const followEnd = () => { if (pinned) messages.scrollTop = messages.scrollHeight
 new ResizeObserver(followEnd).observe(messages);
 new MutationObserver(followEnd).observe(messages, { childList: true, subtree: true, characterData: true });
 
-function add(kind, text) {
+// `at` (seconds) is when a saved message was written; a live one is stamped when it ends.
+function add(kind, text, at) {
   const div = document.createElement('div');
   div.className = `msg ${kind}`;
   div.innerHTML = render(text);
   if (kind === 'bot' && text) {
     div.dataset.raw = text;
+    if (Number.isFinite(at)) div.dataset.at = String(at);
     addActions(div);
   }
   messages.append(div);
@@ -62,12 +64,22 @@ function add(kind, text) {
   return div;
 }
 
-// A finished answer gets a Copy button (shown on hover, top right) for its text as written.
+// A finished answer gets, top right, a Copy button for its text as written (shown on hover)
+// and the time it was written, so an old "you have 63s now" does not read as current.
 function addActions(bubble) {
   if (!bubble.dataset.raw) return;
   const box = document.createElement('div');
   box.className = 'msg-actions';
   box.append(copyButton(bubble.dataset.raw));
+  const at = Number(bubble.dataset.at);
+  const stamp = stampText(at);
+  if (stamp) {
+    const time = document.createElement('time');
+    time.className = 'msg-time';
+    time.textContent = stamp;
+    time.title = `Written ${new Date(at * 1000).toLocaleString()}`;
+    box.append(time);
+  }
   bubble.append(box);
 }
 
@@ -254,7 +266,7 @@ function showChat(chat) {
   for (const m of chat.messages ?? []) {
     if (!KINDS.has(m.role)) continue;
     const text = String(m.text ?? '');
-    add(m.role, m.role === 'error' ? errorLine(text) : text); // as the live error line reads
+    add(m.role, m.role === 'error' ? errorLine(text) : text, m.at); // as the live error line reads
   }
   resetUsage();
   drawHints();
@@ -511,6 +523,7 @@ function settle(bubble, res) {
   const { text, choices } = parseChoices(s.action === 'fill' ? s.text : bubble.dataset.raw);
   bubble.dataset.raw = text;
   bubble.innerHTML = render(text); // drops the working line; render() escapes HTML first
+  bubble.dataset.at = String(Math.floor(Date.now() / 1000));
   addActions(bubble);
   if (res?.ok && !res.stopped && choices) {
     offered = choices;
