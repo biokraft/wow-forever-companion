@@ -1,4 +1,4 @@
-// The data folder and the config that points at it, shared by `wowf init` and `wowf setup`.
+// The data folder and the config that points at it, written by `wowf setup`.
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';

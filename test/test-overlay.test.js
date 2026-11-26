@@ -53,9 +53,7 @@ test('all passing files exit 0', () => {
   }
 });
 
-test('the Taskfile and the release build run the overlay tests one file per process, never combined', () => {
-  assert.match(read('scripts/release.js'), /scripts\/test-overlay\.js|test-overlay\.js/);
-  assert.doesNotMatch(read('scripts/release.js'), /overlay\/test\/\*\.test\.js/);
+test('the Taskfile runs the overlay tests one file per process, never combined', () => {
   const task = /^  test:overlay:\n([\s\S]*?)(?=^  \S)/m.exec(read('Taskfile.yml'))?.[1] ?? '';
   assert.match(task, /node scripts\/test-overlay\.js/);
 });

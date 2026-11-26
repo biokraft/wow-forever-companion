@@ -285,7 +285,6 @@ On macOS you can put `bin/` on your PATH and type `wowf`.
 |---|---|
 | `wowf setup [--yes] [--game-dir P] [--data-dir P] [--main Folder] [--no-overlay]` | set everything up; safe to run again. `--yes` never asks and skips the AI login |
 | `wowf detect` | find the game folder and characters |
-| `wowf init --data-dir <dir> [--git]` | write the config and set up the data folder (setup does this) |
 | `wowf sync` | copy the addon's saved data into the data folder (and compute reminders); shows live state when fresh |
 | `wowf state [--json]` | sync, then show the character with fresh live state merged in |
 | `wowf quests available [--zone <name>] [--band lo,hi]` | quests you can pick up now |

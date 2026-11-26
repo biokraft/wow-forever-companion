@@ -41,10 +41,9 @@ jobs:
         run: |
           node --input-type=module -e "
             import fs from 'node:fs';
-            import { buildPublicTree, buildAddonZip } from './scripts/release.js';
+            import { buildAddonZip } from './scripts/release.js';
             const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
-            buildPublicTree('dist/public');
-            console.log(buildAddonZip('dist/public', 'dist', version));
+            console.log(buildAddonZip('dist', version));
           "
       - name: Release notes from CHANGELOG.md
         env:

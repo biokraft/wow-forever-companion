@@ -90,7 +90,7 @@ test('claudeArgs is headless, streaming, isolated, and locked to read-only tools
     'Bash(node /repo/bin/wowf classdata write drafts/*)', 'Bash(node /repo/bin/wowf classdata write --json *)',
     'Bash(node /repo/bin/wowf knowledge *)',
   ]);
-  for (const bad of ['init', 'install-addon', 'overlay']) assert.ok(a.includes(`Bash(node /repo/bin/wowf ${bad} *)`), `deny ${bad}`);
+  for (const bad of ['setup', 'update', 'install-addon', 'overlay']) assert.ok(a.includes(`Bash(node /repo/bin/wowf ${bad} *)`), `deny ${bad}`);
   assert.ok(!a.some((x) => /^(Edit|Write)$/.test(x)), 'Write/Edit only path-scoped');
   assert.match(a[a.indexOf('--append-system-prompt') + 1], /node \/repo\/bin\/wowf/);
 });
@@ -348,7 +348,7 @@ test('on Windows the wowf command uses forward slashes, so Git Bash does not eat
   const allowed = a.slice(a.indexOf('--allowedTools') + 1, a.indexOf('--disallowedTools'));
   assert.ok(allowed.includes('Bash(node D:/Games/wow-forever-companion/bin/wowf state)'));
   const denied = a.slice(a.indexOf('--disallowedTools') + 1);
-  assert.ok(denied.includes('Bash(node D:/Games/wow-forever-companion/bin/wowf init *)'));
+  assert.ok(denied.includes('Bash(node D:/Games/wow-forever-companion/bin/wowf setup *)'));
   assert.match(a[a.indexOf('--append-system-prompt') + 1], /`node D:\/Games\/wow-forever-companion\/bin\/wowf <command>`/);
   for (const x of a.filter((s) => s.includes('bin/wowf'))) assert.ok(!x.includes('\\'), x);
   const spaced = claudeArgs({ repo: 'C:\\Program Files\\wow-forever-companion', platform: 'win32' });

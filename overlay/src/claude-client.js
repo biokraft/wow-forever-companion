@@ -28,7 +28,7 @@ const NOT_WRITABLE = ['CLAUDE.md', 'claude.md', 'Claude.md', 'AGENTS.md', 'agent
 // No Wowhead: its terms allow only ordinary browsers.
 const WEB_DOMAINS = ['www.warcrafttavern.com', 'warcrafttavern.com', 'warcraft.wiki.gg',
   'us.forums.blizzard.com', 'eu.forums.blizzard.com', 'news.blizzard.com', 'www.icy-veins.com', 'www.method.gg'];
-const DENIED_WOWF = ['init *', 'install-addon *', 'overlay *'];
+const DENIED_WOWF = ['setup *', 'update *', 'install-addon *', 'overlay *'];
 // What `claude -p --resume <id>` prints when it has no conversation with that id.
 const GONE = 'No conversation found';
 const STDERR_KEEP = 2000;

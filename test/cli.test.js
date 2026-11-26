@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { writeFakeQuestie } from './helpers/questie-fixture.js';
 import { parseSavedVariables } from '../src/lua/parse.js';
+import { initData } from '../src/init.js';
 
 const BIN = fileURLToPath(new URL('../bin/wowf', import.meta.url));
 const FIXTURE = fs.readFileSync(new URL('./fixtures/sv/ForeverLog.lua', import.meta.url), 'utf8');
@@ -28,10 +29,20 @@ beforeEach(() => {
 });
 afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
 
-const init = () => run(['init', '--data-dir', dataDir, '--game-dir', game]);
+const SETUP = ['setup', '--yes', '--no-overlay'];
 
-test('init writes config and picks the character with data as main', () => {
-  const r = init();
+// The config and the data folder, as setup leaves them, without installing the addon.
+const init = ({ git = false } = {}) => {
+  process.env.WOWF_CONFIG = cfgFile;
+  try {
+    return initData({ gameDir: game, dataDir, main: 'Testa-Grimtusk', git });
+  } finally {
+    delete process.env.WOWF_CONFIG;
+  }
+};
+
+test('setup --yes writes config and picks the character with data as main', () => {
+  const r = run([...SETUP, '--data-dir', dataDir, '--game-dir', game]);
   assert.equal(r.status, 0, r.stderr);
   assert.deepEqual(JSON.parse(fs.readFileSync(cfgFile, 'utf8')), { gameDir: game, dataDir, main: 'Testa-Grimtusk' });
 });
@@ -279,26 +290,23 @@ test('wowf overlay with path.txt but no program says Electron is missing', () =>
   assert.match(r.stdout, /Electron's app was not downloaded/);
 });
 
-test('init scaffolds an empty data folder and never overwrites an edited CLAUDE.md', () => {
-  const r = init();
-  assert.equal(r.status, 0, r.stderr);
+test('the data folder is scaffolded once and an edited CLAUDE.md is never overwritten', () => {
+  init();
   for (const f of ['CLAUDE.md', 'AGENTS.md', '.gitignore']) assert.ok(fs.existsSync(path.join(dataDir, f)), f);
   for (const d of ['characters', 'plans', 'knowledge', 'drafts']) assert.ok(fs.statSync(path.join(dataDir, d)).isDirectory(), d);
   fs.writeFileSync(path.join(dataDir, 'CLAUDE.md'), '# my notes\n');
   init();
   assert.equal(fs.readFileSync(path.join(dataDir, 'CLAUDE.md'), 'utf8'), '# my notes\n');
-  assert.match(r.stdout, /install-addon/);
-  assert.match(r.stdout, /\/fc sync/);
 });
 
-test('init keeps overlay settings from an existing config', () => {
+test('a second setup keeps overlay settings from an existing config', () => {
   fs.writeFileSync(cfgFile, JSON.stringify({ gameDir: game, dataDir, main: null, overlay: { backend: 'claude', hotkey: 'F9' } }));
   init();
   assert.deepEqual(JSON.parse(fs.readFileSync(cfgFile, 'utf8')).overlay, { backend: 'claude', hotkey: 'F9' });
 });
 
-test('init --git creates a git repo in the data folder', () => {
-  run(['init', '--data-dir', dataDir, '--game-dir', game, '--git']);
+test('the data folder gets a git history when asked', () => {
+  init({ git: true });
   assert.ok(fs.existsSync(path.join(dataDir, '.git')));
 });
 
@@ -316,22 +324,13 @@ test('knowledge write, list and show through the CLI', () => {
   assert.match(bad.stderr, /sources/);
 });
 
-test('init points new players to the game plan for goals and to About me for the rest', () => {
-  const out = init().stdout;
-  assert.match(out, /game plan/);
-  assert.match(out, /Plan page/);
-  assert.match(out, /set up my game plan/);
-  assert.match(out, /"About me"[^\n]*anything else/);
-  assert.doesNotMatch(out, /About me[^\n]*knows your goals/);
-});
-
 test('review: AGENTS.md holds the notes and CLAUDE.md imports it (Pi reads AGENTS.md first)', () => {
   init();
   assert.match(fs.readFileSync(path.join(dataDir, 'AGENTS.md'), 'utf8'), /About me/);
   assert.equal(fs.readFileSync(path.join(dataDir, 'CLAUDE.md'), 'utf8').trim(), '@AGENTS.md');
 });
 
-test('review: init never adds AGENTS.md next to an existing real CLAUDE.md', () => {
+test('review: the scaffold never adds AGENTS.md next to an existing real CLAUDE.md', () => {
   fs.mkdirSync(dataDir, { recursive: true });
   fs.writeFileSync(path.join(dataDir, 'CLAUDE.md'), '# My real notes\n');
   init();
@@ -360,10 +359,10 @@ test('review: knowledge list works without a config and is empty: nothing ships 
   assert.doesNotMatch(r.stdout, /shipped/);
 });
 
-test('review: init refuses the home folder as the data folder', () => {
-  const r = run(['init', '--data-dir', os.homedir(), '--game-dir', game]);
+test('review: setup refuses the home folder as the data folder', () => {
+  const r = run([...SETUP, '--data-dir', os.homedir(), '--game-dir', game]);
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /home folder/);
+  assert.match(r.stdout + r.stderr, /home folder/);
 });
 
 test('overlay autostart on, status and off manage the login item', { skip: process.platform !== 'darwin' && 'login items are macOS only' }, () => {
@@ -488,7 +487,7 @@ test('quests available excludes a quest that left the log and one picked up sinc
   assert.deepEqual(JSON.parse(r.stdout).map((q) => q.id), []);
 });
 
-test('init and sync keep live files out of the data folder history', () => {
+test('the scaffold and sync keep live files out of the data folder history', () => {
   init();
   assert.ok(fs.readFileSync(path.join(dataDir, '.gitignore'), 'utf8').split('\n').includes('characters/*.live.json'));
   fs.writeFileSync(path.join(dataDir, '.gitignore'), '.wowf/\n');
@@ -496,7 +495,7 @@ test('init and sync keep live files out of the data folder history', () => {
   assert.ok(fs.readFileSync(path.join(dataDir, '.gitignore'), 'utf8').split('\n').includes('characters/*.live.json'));
 });
 
-test('init and sync keep overlay chat transcripts out of the data folder history', () => {
+test('the scaffold and sync keep overlay chat transcripts out of the data folder history', () => {
   init();
   assert.ok(fs.readFileSync(path.join(dataDir, '.gitignore'), 'utf8').split('\n').includes('chats/'));
   fs.writeFileSync(path.join(dataDir, '.gitignore'), '.wowf/\n');
