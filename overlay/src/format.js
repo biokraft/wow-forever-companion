@@ -35,14 +35,22 @@ export function renderMarkdown(text) {
   const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
   const out = [];
   let para = [];
-  let list = null; // { tag, items }
+  // { tag, start, indent, items: [{ text, sub }] }; `sub` is a list nested under an item.
+  let list = null;
 
   const flushPara = () => {
     if (para.length) out.push(`<p>${para.map(renderLite).join('<br>')}</p>`);
     para = [];
   };
+  // A numbered list keeps the number its first item was written with: steps go on counting
+  // after a paragraph or bullets in between ("4." stays 4, it does not restart at 1).
+  const listHtml = (l) => {
+    const start = l.tag === 'ol' && l.start !== 1 ? ` start="${l.start}"` : '';
+    return `<${l.tag}${start}>${l.items.map((i) => `<li>${renderLite(i.text)}${i.sub ? listHtml(i.sub) : ''}</li>`).join('')}</${l.tag}>`;
+  };
+  const newList = (tag, number, indent) => ({ tag, start: number ?? 1, indent, items: [] });
   const flushList = () => {
-    if (list) out.push(`<${list.tag}>${list.items.map((i) => `<li>${renderLite(i)}</li>`).join('')}</${list.tag}>`);
+    if (list) out.push(listHtml(list));
     list = null;
   };
   const flush = () => { flushPara(); flushList(); };
@@ -72,15 +80,32 @@ export function renderMarkdown(text) {
       continue;
     }
     if ((m = /^\s*>\s?(.*)$/.exec(line))) { flush(); out.push(`<blockquote>${renderLite(m[1])}</blockquote>`); continue; }
-    if ((m = /^\s*[-*+]\s+(.*)$/.exec(line)) || (m = /^\s*\d+[.)]\s+(.*)$/.exec(line))) {
-      const tag = /^\s*\d/.test(line) ? 'ol' : 'ul';
+    if ((m = /^(\s*)[-*+]\s+(.*)$/.exec(line)) || (m = /^(\s*)(\d{1,9})[.)]\s+(.*)$/.exec(line))) {
+      const tag = m.length === 4 ? 'ol' : 'ul';
+      const number = tag === 'ol' ? Number(m[2]) : null;
+      const item = { text: m[m.length - 1], sub: null };
+      const indent = m[1].length;
       flushPara();
+      // Indented further than the open list: it belongs to that list's last item.
+      if (list && indent >= list.indent + 2) {
+        const parent = list.items[list.items.length - 1];
+        if (parent.sub && parent.sub.tag !== tag) { flushList(); } else {
+          parent.sub ??= newList(tag, number, indent);
+          parent.sub.items.push(item);
+          continue;
+        }
+      }
       if (list && list.tag !== tag) flushList();
-      if (!list) list = { tag, items: [] };
-      list.items.push(m[1]);
+      if (!list) list = newList(tag, number, indent);
+      list.items.push(item);
       continue;
     }
-    if (list && /^\s{2,}\S/.test(raw)) { list.items[list.items.length - 1] += ` ${line.trim()}`; continue; }
+    if (list && /^\s{2,}\S/.test(raw)) {
+      const last = list.items[list.items.length - 1];
+      const target = last.sub ? last.sub.items[last.sub.items.length - 1] : last;
+      target.text += ` ${line.trim()}`;
+      continue;
+    }
     flushList();
     para.push(line);
   }

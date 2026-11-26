@@ -83,6 +83,7 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .msg.bot h2, .msg.bot h3, .msg.bot h4, .msg.bot h5, .msg.bot h6 { margin: 8px 0 4px; font: 600 14px var(--font); color: var(--gold); font-variant: small-caps; letter-spacing: 0.3px; }
 .msg.bot ul, .msg.bot ol { margin: 0 0 6px; padding-left: 18px; }
 .msg.bot li { margin: 1px 0; }
+.msg.bot li > ul, .msg.bot li > ol { margin-bottom: 0; }
 .msg.bot li::marker { color: var(--gold-dim); }
 .msg.bot hr { border: 0; height: 1px; margin: 8px 0; background: linear-gradient(90deg, transparent, var(--bronze), transparent); }
 .msg.bot table { width: 100%; margin: 0 0 6px; border-collapse: collapse; font-size: 13px; }
