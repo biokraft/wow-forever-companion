@@ -81,14 +81,63 @@ function world(over = {}) {
 
 const gitCalls = (calls) => calls.run.filter(([c]) => c === 'git').map(([, a]) => a.join(' '));
 
-test('not a git checkout: explains the ZIP download and runs nothing', async () => {
-  const w = world({ git: false });
-  assert.deepEqual(await runUpdate(w.deps), { ok: false, code: 'not-git' });
-  assert.deepEqual(w.calls.run, []);
+// A folder without git history: the newest code arrives as a download. The fake stands in
+// for the download and the copy; `fetched` and `replaced` record what happened.
+function archiveWorld(over = {}, { fetchError = null, replaceError = null } = {}) {
+  const w = world({ git: false, ...over });
+  w.archive = { fetched: 0, replaced: [], cleaned: 0 };
+  const before = w.state.lockAfter;
+  w.state.lockAfter = w.state.lockBefore; // on disk before the copy
+  w.deps.archive = {
+    fetchNewest: async () => {
+      w.archive.fetched += 1;
+      if (fetchError) throw new Error(fetchError);
+      return { tree: '/tmp/newest', cleanup: () => { w.archive.cleaned += 1; } };
+    },
+    replaceTree: (tree, repoDir) => {
+      if (replaceError) throw new Error(replaceError);
+      w.archive.replaced.push([tree, repoDir]);
+      w.state.version = w.state.newVersion;
+      w.state.lockAfter = before;
+    },
+  };
+  return w;
+}
+
+test('not a git clone: downloads the newest code, copies it over and refreshes packages and addon', async () => {
+  const w = archiveWorld();
+  assert.deepEqual(await runUpdate(w.deps), { ok: true, code: 'updated' });
+  assert.deepEqual(gitCalls(w.calls), [], 'git is never run in a folder without history');
+  assert.deepEqual(w.archive.replaced, [['/tmp/newest', REPO]]);
+  assert.equal(w.archive.cleaned, 1, 'the temporary download is removed');
+  assert.ok(w.calls.run.some(([c, a]) => c === 'npm' && a.join(' ') === 'ci'), 'the lockfile changed');
+  assert.deepEqual(w.calls.installAddon, [GAME]);
+  assert.match(w.text(), /Updated Forever Companion from 0\.4\.0 to 0\.4\.1\./);
+  assert.match(w.text(), /Faster sync/);
+});
+
+test('not a git clone: the same dependencies need no npm call', async () => {
+  const w = archiveWorld({ lockAfter: lock('0.4.1', '39.8.10') });
+  assert.deepEqual(await runUpdate(w.deps), { ok: true, code: 'updated' });
+  assert.equal(w.calls.run.some(([c]) => c === 'npm'), false);
+});
+
+test('not a git clone: a failed download changes nothing and says so', async () => {
+  const w = archiveWorld({}, { fetchError: 'GitHub answered 503' });
+  assert.deepEqual(await runUpdate(w.deps), { ok: false, code: 'download-failed' });
+  assert.deepEqual(w.archive.replaced, []);
   assert.deepEqual(w.calls.installAddon, []);
-  assert.match(w.text(), /ZIP/);
-  assert.match(w.text(), /open https:\/\/github\.com\/biokraft\/wow-forever-companion, choose Code, then Download ZIP/);
-  assert.match(w.text(), /node bin\/wowf setup/);
+  assert.match(w.text(), /nothing was changed \(GitHub answered 503\)/);
+});
+
+test('not a git clone: a copy that stops part-way says how to repair the folder', async () => {
+  const w = archiveWorld({}, { replaceError: 'EBUSY: resource busy' });
+  assert.deepEqual(await runUpdate(w.deps), { ok: false, code: 'copy-failed' });
+  assert.equal(w.archive.cleaned, 1);
+  assert.deepEqual(w.calls.installAddon, []);
+  assert.match(w.text(), /EBUSY/);
+  assert.match(w.text(), /node bin\/wowf update again/);
+  assert.match(w.text(), /https:\/\/github\.com\/biokraft\/wow-forever-companion/);
 });
 
 test('local changes to tracked files: lists them and does not pull', async () => {
