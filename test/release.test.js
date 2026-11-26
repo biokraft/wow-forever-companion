@@ -4,62 +4,44 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { buildPublicTree, buildAddonZip, workingTreeDirty } from '../scripts/release.js';
+import { buildAddonZip, workingTreeDirty } from '../scripts/release.js';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const tmp = (p) => fs.mkdtempSync(path.join(os.tmpdir(), p));
+const noZip = process.platform === 'win32' && 'zip CLI';
+const entries = (zip) => execFileSync('unzip', ['-Z1', zip], { encoding: 'utf8' }).split('\n').filter(Boolean);
 
-test('the public tree has the toolkit but no private docs or local state', () => {
-  const out = tmp('wowf-rel-');
-  const files = buildPublicTree(out);
-  assert.ok(fs.existsSync(path.join(out, 'README.md')));
-  assert.ok(fs.existsSync(path.join(out, 'bin', 'wowf')));
-  assert.ok(!fs.existsSync(path.join(out, 'docs', 'superpowers')));
-  assert.ok(!files.some((f) => f.includes('node_modules') || f.endsWith('ForeverLog_Plan.lua')));
-});
-
-test('the addon zip contains ForeverLog with an empty plan file', { skip: process.platform === 'win32' && 'zip CLI' }, () => {
-  const tree = tmp('wowf-tree-');
-  buildPublicTree(tree);
-  const out = tmp('wowf-zip-');
-  const zip = buildAddonZip(tree, out, '9.9.9');
+test('the addon zip contains ForeverLog with an empty plan file', { skip: noZip }, () => {
+  const zip = buildAddonZip(tmp('wowf-zip-'), '9.9.9');
   assert.equal(path.basename(zip), 'ForeverLog-9.9.9.zip');
-  const list = execFileSync('unzip', ['-Z1', zip], { encoding: 'utf8' }).split('\n').filter(Boolean).sort();
+  const list = entries(zip);
   assert.ok(list.includes('ForeverLog/ForeverLog.toc'));
   assert.ok(list.includes('ForeverLog/Core.lua'));
   assert.ok(list.includes('ForeverLog/ForeverLog_Plan.lua'));
+  assert.ok(list.every((f) => f.startsWith('ForeverLog/')), 'nothing but the addon folder');
   const plan = execFileSync('unzip', ['-p', zip, 'ForeverLog/ForeverLog_Plan.lua'], { encoding: 'utf8' });
   assert.match(plan, /ForeverLogPlan = nil/);
 });
 
-test('review: the public tree comes from the last commit, not the working folder', () => {
+test('review: the addon zip comes from the last commit, not the working folder', { skip: noZip }, () => {
   const stray = path.join(ROOT, 'addon', 'ForeverLog', 'stray-untracked-test-file.lua');
   fs.writeFileSync(stray, '-- untracked\n');
   try {
-    const out = tmp('wowf-rel-');
-    buildPublicTree(out);
-    assert.equal(fs.existsSync(path.join(out, 'addon', 'ForeverLog', 'stray-untracked-test-file.lua')), false);
+    const list = entries(buildAddonZip(tmp('wowf-zip-'), '9.9.7'));
+    assert.equal(list.includes('ForeverLog/stray-untracked-test-file.lua'), false);
     assert.equal(workingTreeDirty(), true, 'an untracked file makes the tree dirty');
   } finally {
     fs.rmSync(stray, { force: true });
   }
 });
 
-test('review: files in the public tree have normal permissions', { skip: process.platform === 'win32' && 'Windows has no Unix file modes' }, () => {
-  const out = tmp('wowf-rel-');
-  buildPublicTree(out);
-  assert.equal(fs.statSync(path.join(out, 'README.md')).mode & 0o777, 0o644);
-  assert.equal(fs.statSync(path.join(out, 'bin', 'wowf')).mode & 0o777, 0o755);
-});
-
-test('buildAddonZip accepts folders given relative to the current directory, as the release workflow does', { skip: process.platform === 'win32' && 'zip CLI' }, () => {
+test('buildAddonZip accepts a folder given relative to the current directory, as the release workflow does', { skip: noZip }, () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fc-relzip-'));
   const before = process.cwd();
   try {
-    buildPublicTree(path.join(root, 'tree'));
     process.chdir(root);
-    const zip = buildAddonZip('tree', 'out', '9.9.8');
+    const zip = buildAddonZip('out', '9.9.8');
     assert.ok(path.isAbsolute(zip), 'the returned path does not depend on the current directory');
     assert.ok(fs.statSync(zip).size > 1000);
     assert.equal(fs.realpathSync(path.dirname(zip)), fs.realpathSync(path.join(root, 'out')));

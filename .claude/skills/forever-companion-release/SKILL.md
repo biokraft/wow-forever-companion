@@ -73,11 +73,11 @@ three numbers separated by dots (like `0.4.0`, no leading `v`), stop and ask the
    with the message `release: <version>`. `git status --porcelain` must print nothing
    afterwards.
 
-7. **Build.** Run `task release:build`. It builds the clean public tree from `HEAD`, runs
-   every test suite and the privacy scan there, and writes `dist/ForeverLog-<version>.zip`.
-   If it fails, stop and show the owner the failure. The owner may fix it with new commits
-   and run the routine again (it resumes), or ask you to run this step again, for example
-   after a flaky test.
+7. **Build.** Run `task check` again, now on the release commit, then `task release:build`.
+   The build zips the addon as `HEAD` has it, scans it for personal data and writes
+   `dist/ForeverLog-<version>.zip`. If either fails, stop and show the owner the failure.
+   The owner may fix it with new commits and run the routine again (it resumes), or ask you
+   to run this step again, for example after a flaky test.
 
 8. **Ask the owner.** Show the owner, in this conversation:
    - the version `<version>`,

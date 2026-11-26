@@ -31,6 +31,6 @@ tasks:
       - node bin/wowf overlay
 
   release:build:
-    desc: Build the clean public tree and the addon zip (publishes nothing)
+    desc: Build the addon zip from the last commit (publishes nothing)
     cmds:
       - node scripts/release.js
