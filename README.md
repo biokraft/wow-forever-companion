@@ -12,7 +12,7 @@
 </p>
 
 Forever Companion is a free AI leveling helper for **WoW: Forever**. It reads the data its
-addon saves about your character (level, gear, bags, talents, spells, professions, quest log) and your
+addon saves about your character (level, gear, bags, bank, talents, spells, professions, quest log) and your
 installed Questie quest database, answers your questions in a small chat window over the game,
 and shows its plan in a panel inside the game that ticks steps off as you play.
 It sends no input to the game, reads no game memory and automates nothing.
@@ -124,6 +124,9 @@ The companion sees your data when the game saves it: on `/fc sync`, logout or qu
   your class's stat weights and weapon skills.
 - **Talents, trainers, weapon skills, professions:** "which talent at 12?", "where do I train
   Engineering?", "what do I need for Mining 75?"
+- **Crafting:** "what am I missing for a Rough Copper Bomb?" It checks your bags and your
+  bank, and says when part of it is already in the bank. It knows the bank as it was when
+  you last opened it.
 - **Plans in the game:** ask for a route and it puts the steps in the in-game panel. Steps
   tick themselves when you turn in the quest, reach the level, equip the item or learn the
   skill. Click a step for a map pin.
@@ -190,7 +193,8 @@ That is why it is off unless you turn it on.
 - **Turn it off:** `/fc bridge off`. Live data then ages out within two minutes.
 - **Needs:** macOS, the overlay running, and *Screen Recording* permission for the overlay
   (the same permission **look** uses). Windows has no live state.
-- **Still needs `/fc sync`:** gear, bags, loot, talents, skills and spells. A new plan needs a reload.
+- **Still needs `/fc sync`:** gear, bags, loot, talents, skills and spells; the bank also needs
+  a bank visit first. A new plan needs a reload.
 
 Live values are never written into your snapshot, journal or plans, and the live file is
 never committed to your data folder's history.

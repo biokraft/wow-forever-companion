@@ -166,8 +166,32 @@ function handlers.TRAINER_SHOW()
   ns.journalAdd("trainer", { level = UnitLevel("player"), npc = UnitName("npc"), kind = profession and "profession" or "class" })
 end
 
+-- The bank can be read only while its window is open (see ns.readBank): once when it opens,
+-- and again a moment after each change during the visit.
+local bankOpen = false
+local function bankChanged()
+  if not bankOpen or pending.bank then return end
+  pending.bank = true
+  C_Timer.After(0.3, function()
+    pending.bank = nil
+    if bankOpen then ns.guard("bank", ns.readBank) end
+  end)
+end
+
+function handlers.BANKFRAME_OPENED()
+  bankOpen = true
+  ns.guard("bank", ns.readBank)
+end
+
+function handlers.BANKFRAME_CLOSED()
+  bankOpen = false
+end
+
+function handlers.PLAYERBANKSLOTS_CHANGED() bankChanged() end
+
 function handlers.BAG_UPDATE()
   debounced("bags", { "bags" })
+  bankChanged()
 end
 
 function handlers.PLAYER_LOGOUT()

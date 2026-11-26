@@ -33,6 +33,20 @@ export function spellsLine(spells) {
   return `Spells known (${byName.size}): ${[...byName].map(([name, rank]) => (rank ? `${name} (${rank})` : name)).join(', ')}`;
 }
 
+// The bank in one line: each item once with its total count, and when the bank was seen.
+// The addon can read the bank only while its window is open, so this is the last visit.
+export function bankLine(bank, now = Math.floor(Date.now() / 1000)) {
+  if (!bank || !Array.isArray(bank.items)) return 'Bank: not seen yet (the addon saves it when the player opens the bank; then /fc sync).';
+  const counts = new Map();
+  for (const entry of bank.items) {
+    const name = entry?.item?.name;
+    if (name) counts.set(name, (counts.get(name) ?? 0) + (entry.count ?? 1));
+  }
+  const head = `Bank as seen ${ago(Math.max(0, now - (bank.time ?? now)))} ago (${bank.slotsFree ?? '?'} of ${bank.slotsTotal ?? '?'} slots free)`;
+  if (!counts.size) return `${head}: empty.`;
+  return `${head}: ${[...counts].map(([name, count]) => (count > 1 ? `${name} x${count}` : name)).join(', ')}`;
+}
+
 export function stateText(s, file, now = Math.floor(Date.now() / 1000)) {
   const first = String(s.name ?? '?').split(/\s+/)[0];
   // With live state (readCharacter merged it) the place is the live zone and position.
@@ -59,6 +73,7 @@ export function stateText(s, file, now = Math.floor(Date.now() / 1000)) {
   const gear = Object.entries(s.equipped ?? {}).filter(([, it]) => it).map(([slot, it]) => `${slot}:${it.name}`).join(', ');
   if (gear) lines.push(`Equipped: ${gear}`);
   lines.push(`Bags: ${s.bagSlotsFree ?? '?'} of ${s.bagSlotsTotal ?? '?'} slots free.`);
+  lines.push(bankLine(s.bank, now));
   const skills = (s.skills ?? []).filter((k) => k.kind !== 'other').map((k) => `${k.name} ${k.rank}/${k.max}`).join(', ');
   if (skills) lines.push(`Skills: ${skills}`);
   lines.push(spellsLine(s.spells));
