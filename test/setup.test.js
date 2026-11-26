@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { runSetup, runCommand, windowsCommandLine, AI_LOGINS, installOverlayPackages, overlayElectronReady, electronMissingText } from '../src/setup.js';
+import { runSetup, runCommand, windowsCommandLine, AI_LOGINS, CLAUDE_CODE, installOverlayPackages, overlayElectronReady, electronMissingText } from '../src/setup.js';
 import { agentPath } from '../src/autostart.js';
 
 // Absolute paths in the form of the OS running the tests (setup resolves what it is given).
@@ -30,7 +30,7 @@ function world(over = {}) {
     ...over,
   };
   if (over.files) state.files = new Set(over.files);
-  const calls = { initData: [], installAddon: [], run: [], enableAutostart: [] };
+  const calls = { initData: [], installAddon: [], run: [], enableAutostart: [], setBackend: [] };
   const deps = {
     nodeVersion: 'v22.3.0', platform: 'darwin', home: HOME, overlayDir: OVERLAY,
     // Electron's program arrives with path.txt unless a test says the extraction left it out.
@@ -52,6 +52,7 @@ function world(over = {}) {
       state.files.add(o.dataDir);
       return { cfg: state.cfg, gitFailed: false, created };
     },
+    setBackend: (backend) => { calls.setBackend.push(backend); state.cfg = { ...state.cfg, overlay: { ...state.cfg?.overlay, backend } }; },
     addonCurrent: () => state.addonCurrent,
     installAddon: (g, ...rest) => { calls.installAddon.push([g, ...rest]); state.addonCurrent = true; return `${g}/Interface/AddOns/ForeverLog`; },
     enableAutostart: (o) => { calls.enableAutostart.push(o); state.files.add(agentPath(HOME)); return agentPath(HOME); },
@@ -63,6 +64,7 @@ function world(over = {}) {
       if (cmd === 'npm' && a === 'rebuild electron') { if (state.rebuildMakesPathTxt) state.files.add(PATH_TXT); return { code: 0, stdout: '' }; }
       if (cmd === 'npm' && a.startsWith('install -g')) { state.piInstalled = true; return { code: 0, stdout: '' }; }
       if (cmd === 'npm') return { code: 0, stdout: '' };
+      if (cmd === 'claude') return state.claudeInstalled && a === '--version' ? { code: 0, stdout: '2.0.0 (Claude Code)\n' } : { code: 127, stdout: '' };
       if (cmd === 'pi' && !state.piInstalled) return { code: 127, stdout: '' };
       if (cmd === 'pi' && a === '--version') return { code: 0, stdout: '1.6.0\n' };
       if (cmd === 'pi' && a === '--list-models') return { code: 0, stdout: state.piProvider ? 'openai gpt-x\n' : 'No models available\n' };
@@ -304,8 +306,10 @@ test('AI logins: six allowed entries, real Pi providers, never a subscription co
 
 test('AI: Pi missing and the install declined is skipped with the install command', async () => {
   const w = world({ piInstalled: false });
-  const r = await runSetup({ opts: {}, io: fakeIo([[/Install it now/i, 'n'], ...ANSWERS]).io, deps: w.deps });
+  const { io, asked } = fakeIo([[/AI login/, 'OpenAI API key'], [/Install it now/i, 'n'], ...ANSWERS]);
+  const r = await runSetup({ opts: {}, io, deps: w.deps });
   const ai = step(r, 'ai');
+  assert.ok(asked.findIndex((a) => /AI login/.test(a.q)) < asked.findIndex((a) => /Install it now/.test(a.q)), 'Pi is offered only after a login that needs it was picked');
   assert.equal(ai.status, 'skipped');
   assert.match(ai.text, /npm install -g @earendil-works\/pi-coding-agent/);
   assert.ok(!w.calls.run.some(([cmd, args]) => cmd === 'npm' && args.includes('-g')));
@@ -330,6 +334,58 @@ test('AI: no provider shows the 18+ sentence, then exactly the six labels, then 
   const login = w.calls.run.find(([cmd, args]) => cmd === 'pi' && args[0] === 'auth');
   assert.deepEqual(login, ['pi', chosen.args, { inherit: true }]);
   assert.equal(step(r, 'ai').status, 'done');
+});
+
+test('AI: with Claude Code installed it is the first choice; picking it sets the backend and starts no login', async () => {
+  const w = world({ piInstalled: false, piProvider: false, claudeInstalled: true });
+  const { io, asked, said } = fakeIo([[/AI login/, CLAUDE_CODE.label], ...ANSWERS]);
+  const r = await runSetup({ opts: {}, io, deps: w.deps });
+  const menu = asked.find((a) => /AI login/.test(a.q));
+  assert.deepEqual(menu.choices, [CLAUDE_CODE.label, ...AI_LOGINS.map((l) => l.label)]);
+  assert.match(CLAUDE_CODE.label, /recommended/);
+  assert.deepEqual(w.calls.setBackend, ['claude']);
+  assert.equal(step(r, 'ai').status, 'done');
+  assert.match(step(r, 'ai').text, /Claude Code/);
+  assert.ok(said.some((t) => /Anthropic's terms/.test(t) && /your own login/.test(t)), 'the terms note is shown with the choice');
+  assert.ok(!asked.some((a) => /Install it now/.test(a.q)), 'Pi is not offered');
+  assert.ok(!w.calls.run.some(([cmd, args]) => (cmd === 'npm' && args.includes('-g')) || (cmd === 'pi' && args[0] === 'auth') || (cmd === 'claude' && args[0] !== '--version')));
+  // A second run finds the choice and asks nothing about AI.
+  const again = fakeIo(ANSWERS);
+  const r2 = await runSetup({ opts: {}, io: again.io, deps: w.deps });
+  assert.equal(step(r2, 'ai').status, 'already');
+  assert.ok(!again.asked.some((a) => /AI login/.test(a.q)));
+});
+
+test('AI: without Claude Code the menu holds only the Pi logins and says how to get the recommended way', async () => {
+  const w = world({ piProvider: false });
+  const { io, asked, said } = fakeIo([[/AI login/, 'OpenAI API key'], ...ANSWERS]);
+  await runSetup({ opts: {}, io, deps: w.deps });
+  assert.deepEqual(asked.find((a) => /AI login/.test(a.q)).choices, AI_LOGINS.map((l) => l.label));
+  assert.ok(said.some((t) => /^Recommended: Claude Code/.test(t) && /claude\.com\/claude-code/.test(t)));
+  assert.deepEqual(w.calls.setBackend, []);
+});
+
+test('AI: a Pi login that already works is kept, also with Claude Code installed', async () => {
+  const w = world({ claudeInstalled: true });
+  const { io, asked } = fakeIo(ANSWERS);
+  const r = await runSetup({ opts: {}, io, deps: w.deps });
+  assert.equal(step(r, 'ai').status, 'already');
+  assert.match(step(r, 'ai').text, /Pi works/);
+  assert.ok(!asked.some((a) => /AI login/.test(a.q)));
+});
+
+test('AI: the backend is set to Claude Code but it is gone: failed, with where to get it', async () => {
+  const w = world({ cfg: { overlay: { backend: 'claude' } } });
+  const r = await runSetup({ opts: {}, io: fakeIo(ANSWERS).io, deps: w.deps });
+  assert.equal(step(r, 'ai').status, 'failed');
+  assert.match(step(r, 'ai').text, /claude\.com\/claude-code/);
+});
+
+test('--yes with Claude Code installed still chooses nothing', async () => {
+  const w = world({ piProvider: false, claudeInstalled: true });
+  const r = await runSetup({ opts: { yes: true }, io: fakeIo().io, deps: w.deps });
+  assert.equal(step(r, 'ai').status, 'skipped');
+  assert.deepEqual(w.calls.setBackend, []);
 });
 
 test('AI: choosing Skip runs no login', async () => {

@@ -68,6 +68,7 @@ test('piArgs keeps Pi read-only and isolated', () => {
   for (const f of ['--mode', 'rpc', '--no-approve', '--no-extensions', '--no-skills', '-e', '/x/pi/extension.js', '--skill', '/x/skills', '--model', 'openai/gpt']) assert.ok(args.includes(f), f);
   assert.ok(tools.includes('wow_state') && tools.includes('wow_plan_write'));
   assert.ok(tools.includes('wow_gameplan'), 'the plan page can save the game plan');
+  assert.ok(tools.includes('wow_classdata'), 'the upgrade reminders need saved class data');
 });
 
 test('piArgs tells Pi to refuse live combat advice', () => {

@@ -37,14 +37,18 @@ Before every question the agent syncs your newest game data. Pi reads "About me"
 - **look** attaches a screenshot of the WoW window. On macOS allow *Screen Recording* for
   Electron once (System Settings, Privacy & Security).
 - **Backends** (`overlay.backend` in the config):
-  - `"pi"` (default): any model Pi supports. `node bin/wowf setup` sets up the login.
-  - `"claude"`: drives **your own** installed Claude Code under **your own** login, isolated from
+  - `"claude"` (recommended): drives **your own** installed Claude Code under **your own** login, isolated from
     your personal Claude settings. It may read your data folder, run the safe `wowf` commands,
     search the web, fetch from WoW sites only, and write only its research notes
-    (`knowledge/*.md`) and plan drafts (`drafts/*.json`). Opt-in, for personal use. Note:
+    (`knowledge/*.md`) and plan drafts (`drafts/*.json`). `node bin/wowf setup` offers it first
+    when Claude Code is installed; it is your choice, for personal use. Note:
     Anthropic's terms do not allow third-party developers to route requests through Free, Pro, Max,
     or Ultra plan credentials on behalf of users; decide for yourself whether this mode fits
     your use, or use Pi with an Anthropic API key instead.
+  - `"pi"` (used when nothing is set): any model Pi supports, for players with an API key or
+    account from another provider. `node bin/wowf setup` sets up the login. It has no
+    shell, cannot change files except through the companion's own tools, has no web search
+    and fetches from WoW sites only.
 
 ## Configuration
 

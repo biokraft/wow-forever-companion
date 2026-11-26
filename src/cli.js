@@ -5,7 +5,7 @@ import os from 'node:os';
 import readline from 'node:readline/promises';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { loadConfig, configPath } from './config.js';
+import { loadConfig, saveConfig, configPath } from './config.js';
 import { findGameDir, isGameDir, listCharacters, addonsDir, defaultGameDirs } from './detect.js';
 import { syncAll, formatSummary } from './sync.js';
 import { installAddon, addonSourceDir } from './install-addon.js';
@@ -187,6 +187,8 @@ const commands = {
         findGameDir: () => findGameDir(), isGameDir, listCharacters, loadConfig, initData,
         addonCurrent, installAddon: (gameDir) => installAddon(gameDir),
         run: runCommand, enableAutostart, overlayDir: overlayDir(),
+        // The config exists by the AI step: the data step wrote it.
+        setBackend: (backend) => { const cfg = loadConfig(); saveConfig({ ...cfg, overlay: { ...cfg.overlay, backend } }); },
       },
     });
     return ok ? 0 : 1;
@@ -333,7 +335,8 @@ const commands = {
     const sub = positional[1];
     if (sub === 'write') {
       const input = readJsonInput('gameplan write', 'game plan', positional[2], opts.json);
-      out(`Game plan saved: ${writeGamePlan(cfg, slug, input).plan.summary}`);
+      const saved = writeGamePlan(cfg, slug, input);
+      out(`Game plan saved: ${saved.plan.summary}${saved.previous ? ` (the plan before it is kept as ${path.basename(saved.previous)})` : ''}`);
       return 0;
     }
     if (sub === 'show') {

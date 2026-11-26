@@ -29,6 +29,7 @@ const ACTIVITY = {
   wow_web_fetch: 'Researching',
   wow_plan_write: 'Writing your plan',
   wow_gameplan: 'Saving your plan',
+  wow_classdata: 'Checking your class',
   Read: 'Reading your data',
   Glob: 'Reading your data',
   Grep: 'Reading your data',

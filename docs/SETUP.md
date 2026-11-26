@@ -131,22 +131,30 @@ overlay is the chat window that floats over the game. Answer yes unless you want
 companion only from a terminal agent (see [REFERENCE.md](REFERENCE.md)). The download can take a
 few minutes.
 
-**AI login.** The overlay talks to an AI through Pi, a free AI app that runs on your
-computer. If Pi is missing, setup offers to install it
-(`npm install -g @earendil-works/pi-coding-agent`). Then, if Pi has no AI login yet, setup
-reminds you that AI providers require their users to be 18 or older and shows this menu:
+**AI login.** The overlay needs an AI to talk to. Setup reminds you that AI providers
+require their users to be 18 or older and shows this menu:
 
 | Choice | What you need |
 |---|---|
+| Claude Code (recommended) | [Claude Code](https://claude.com/claude-code) installed and signed in. The overlay runs your own Claude Code under your own login. Shown only when Claude Code is installed; see the note on its terms in [REFERENCE.md](REFERENCE.md) |
 | OpenAI API key | an API key from your OpenAI platform account; you pay OpenAI per use |
 | Anthropic API key | an API key from your Anthropic console account; you pay Anthropic per use |
 | Google Gemini API key (paid tier) | a Gemini API key from a Google project with billing turned on |
 | OpenRouter | an OpenRouter account; you sign in in your browser and pick from many models |
 | Sign in with ChatGPT (official flow) | your ChatGPT account; OpenAI's own sign-in page opens in your browser |
-| Skip (I will set up Pi myself) | nothing now; run setup again later |
+| Skip (I will set it up later) | nothing now; run setup again later |
 
-After you choose, setup hands the terminal to Pi. Pi asks for your key or opens the sign-in
-page. What you type goes to Pi only; Forever Companion never sees or stores your key.
+Claude Code is the recommended way: it is what the author uses every day. Setup starts no
+login for it; if you never signed in, run `claude` in a terminal once.
+
+Every other choice works through Pi, a free AI app that runs on your computer, for players
+who have an API key or account with another provider. If Pi is missing, setup offers to
+install it (`npm install -g @earendil-works/pi-coding-agent`). Then setup hands the terminal
+to Pi. Pi asks for your key or opens the sign-in page. What you type goes to Pi only;
+Forever Companion never sees or stores your key.
+
+A login that already works is kept: setup does not ask again. To change from one to the
+other later, set `overlay.backend` in the config file (see [REFERENCE.md](REFERENCE.md)).
 
 **Start at login (macOS).** Setup asks whether the overlay should start when you log in to
 your Mac. It stays hidden until WoW runs. The default is no. You can change it later with
@@ -158,7 +166,7 @@ your Mac. It stays hidden until WoW runs. The default is no. You can change it l
 
 | Option | Effect |
 |---|---|
-| `--yes` | never asks; takes the defaults. Installs the overlay unless `--no-overlay` is given. Never installs Pi and never starts an AI login: it tells you to run `node bin/wowf setup` yourself for that step |
+| `--yes` | never asks; takes the defaults. Installs the overlay unless `--no-overlay` is given. Never installs Pi, never chooses Claude Code and never starts an AI login: it tells you to run `node bin/wowf setup` yourself for that step |
 | `--game-dir <path>` | the `_forever_` folder, when setup cannot find it |
 | `--data-dir <path>` | the data folder (default `~/wow-companion`) |
 | `--main <folder>` | your main character's folder name, as `node bin/wowf detect` lists it |

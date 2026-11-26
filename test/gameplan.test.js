@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { validateGamePlan, writeGamePlan, readGamePlan, gamePlanLine, gamePlanText, gamePlanFile } from '../src/gameplan.js';
+import { validateGamePlan, writeGamePlan, readGamePlan, gamePlanLine, gamePlanText, gamePlanFile, previousGamePlanFile } from '../src/gameplan.js';
 import { FcError } from '../src/core.js';
 
 const SLUG = 'testrealm-testa-grimtusk';
@@ -86,6 +86,17 @@ test('writeGamePlan stores the plan atomically with updatedAt and readGamePlan r
   assert.equal(plan.updatedAt, 1_800_000_000);
   assert.deepEqual(readGamePlan(cfg, SLUG), plan);
   assert.deepEqual(fs.readdirSync(path.join(cfg.dataDir, 'gameplans')), [`${SLUG}.json`], 'no temp file left');
+});
+
+test('a save keeps the plan it replaces, so a rewrite that went wrong can be taken back', () => {
+  const first = writeGamePlan(cfg, SLUG, good(), { now: 1 });
+  assert.equal(first.previous, null, 'nothing to keep on the first save');
+  const second = writeGamePlan(cfg, SLUG, { summary: 'Rewritten', goal: 'Something else' }, { now: 2 });
+  assert.equal(second.previous, previousGamePlanFile(cfg, SLUG));
+  assert.deepEqual(JSON.parse(fs.readFileSync(second.previous, 'utf8')), first.plan);
+  assert.equal(readGamePlan(cfg, SLUG).summary, 'Rewritten', 'the kept plan is never read as the plan');
+  writeGamePlan(cfg, SLUG, good(), { now: 3 });
+  assert.equal(JSON.parse(fs.readFileSync(second.previous, 'utf8')).summary, 'Rewritten', 'only the last one is kept');
 });
 
 test('an updatedAt or version on input is accepted and updatedAt is replaced', () => {
