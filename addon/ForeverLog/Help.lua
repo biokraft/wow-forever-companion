@@ -81,7 +81,8 @@ H.SECTIONS = {
     "- level, XP, rested XP and money",
     "- zone and position",
     "- quest progress (objectives, quests turned in or abandoned)", "",
-    "Everything else reaches it only when the game saves: gear, bags, talents, spells, professions, weapon skills and reputation.", "",
+    "Everything else reaches it only when the game saves: gear, bags, talents, spells, professions, weapon skills and reputation.",
+    "Your bank is saved as it was when you last opened it.", "",
     cmd("/fc bridge off") .. " turns the line off again. Without the overlay it does nothing.",
   }, "\n") },
   { id = "sync", title = "When to /fc sync", body = table.concat({

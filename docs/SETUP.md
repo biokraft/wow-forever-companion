@@ -179,7 +179,8 @@ The first time you log in with the addon, an in-game guide opens. Reopen it with
 on the plan panel or `/fc help`.
 
 The companion sees new gear, bags, talents and skills when the game saves them: on
-`/fc sync`, logout or quit. Put `/fc sync` on an action-bar macro.
+`/fc sync`, logout or quit. Put `/fc sync` on an action-bar macro. The bank is saved as it was
+when you last opened it in the game.
 
 On macOS, the first time you tick **look** in the chat, macOS asks for *Screen Recording*
 permission for the overlay (shown as Electron). Allow it in System Settings, Privacy &

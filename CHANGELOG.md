@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Your bank.** The addon now saves what is in your bank each time you open it, so the
+  companion can tell you when something you want to craft, buy or farm is already there.
+  It knows the bank as of your last visit and says how long ago that was. After updating,
+  type `/reload`, open your bank once and type `/fc sync`.
+
 ## 0.5.0 (2026-11-26)
 
 **Easier to install and update**
