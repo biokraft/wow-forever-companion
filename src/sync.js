@@ -32,11 +32,12 @@ const defaultEnrich = (cfg) => (snapshot, journal) => ({
 });
 
 // WoW serialises a table with keys 1..n as a list, so slot-keyed tables can arrive as arrays.
+// Either way an empty slot can arrive as null; it is left out, so every entry is an item.
 function bySlot(value) {
-  if (!Array.isArray(value)) return value ?? {};
-  const out = {};
-  value.forEach((v, i) => { if (v != null) out[String(i + 1)] = v; });
-  return out;
+  const entries = Array.isArray(value)
+    ? value.map((v, i) => [String(i + 1), v])
+    : Object.entries(value ?? {});
+  return Object.fromEntries(entries.filter(([, v]) => v != null));
 }
 
 // Live state from the overlay is read, never committed.

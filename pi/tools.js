@@ -55,7 +55,8 @@ export function stateText(s, file, now = Math.floor(Date.now() / 1000)) {
   const status = (q) => (q.leftLog ? ' (left the log: turned in or abandoned, confirmed at next sync)' : q.complete ? ' (ready to turn in)' : '');
   const quests = (s.quests ?? []).map((q) => `- ${q.title} #${q.id}${status(q)}${(q.objectives ?? []).length ? `: ${q.objectives.map((o) => o.text).join('; ')}` : ''}`);
   if (quests.length) lines.push('Quest log:', ...quests);
-  const gear = Object.entries(s.equipped ?? {}).map(([slot, it]) => `${slot}:${it.name}`).join(', ');
+  // Snapshots written before sync dropped empty slots can hold null entries.
+  const gear = Object.entries(s.equipped ?? {}).filter(([, it]) => it).map(([slot, it]) => `${slot}:${it.name}`).join(', ');
   if (gear) lines.push(`Equipped: ${gear}`);
   lines.push(`Bags: ${s.bagSlotsFree ?? '?'} of ${s.bagSlotsTotal ?? '?'} slots free.`);
   const skills = (s.skills ?? []).filter((k) => k.kind !== 'other').map((k) => `${k.name} ${k.rank}/${k.max}`).join(', ');

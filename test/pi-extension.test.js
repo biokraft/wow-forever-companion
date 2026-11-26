@@ -380,3 +380,9 @@ test('without a spell list the state text says the addon is older, instead of im
   assert.match(spellsLine([]), /none recorded yet/);
 });
 
+test('the state text survives an older snapshot whose empty gear slots are null', async () => {
+  const { stateText } = await import('../pi/tools.js');
+  const text = stateText({ name: 'Testa', level: 13, equipped: { 1: null, 4: { name: 'Shirt' }, 16: { name: 'Axe' } } }, '/data/characters/x.json', 1795600000);
+  assert.match(text, /Equipped: 4:Shirt, 16:Axe/);
+});
+
