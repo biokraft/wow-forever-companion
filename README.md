@@ -17,7 +17,9 @@ installed Questie quest database, answers your questions in a small chat window 
 and shows its plan in a panel inside the game that ticks steps off as you play.
 It sends no input to the game, reads no game memory and automates nothing.
 
-<!-- Screenshot of the chat overlay over the game goes here: assets/screenshots/overlay.png -->
+<p align="center">
+  <img src="assets/screenshots/overlay.png" alt="The chat overlay answering a question over the game, with the plan panel above it" width="640">
+</p>
 
 ## Install
 
