@@ -271,7 +271,7 @@ end)
 T.run("profession abilities on their own page join the spellbook, each spell once", function()
   local book = {
     { "Attack", "" }, { "Charge", "Rank 1" },
-    [11] = { "Find Minerals", "" }, [12] = { "Smelting", "Apprentice" }, [13] = { "Mining", "Apprentice" },
+    [11] = { "Find Minerals", "" }, [12] = { "Smelting", "Apprentice " }, [13] = { "Mining", "Apprentice" },
     [21] = { "First Aid", "Apprentice" },
     [31] = { "Attack", "" },
   }

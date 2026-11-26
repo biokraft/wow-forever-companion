@@ -205,6 +205,8 @@ end
 function C.spells(s)
   local spells, seen = {}, {}
   local function add(name, rank, id, tab, passive)
+    -- The client pads some ranks ("Apprentice ").
+    rank = rank and rank:match("^%s*(.-)%s*$")
     rank = (rank and rank ~= "") and rank or nil
     local key = name and (name .. "|" .. (rank or ""))
     if not name or seen[key] then return end
