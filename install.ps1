@@ -116,7 +116,8 @@ function Install-ForeverCompanion {
   $dir = $env:FC_DIR
   if (-not $dir) { $dir = Join-Path $env:USERPROFILE 'wow-forever-companion' }
   $setupArgs = @()
-  if ($env:FC_SETUP_ARGS) { $setupArgs = $env:FC_SETUP_ARGS -split '\s+' | Where-Object { $_ } }
+  # @(...) keeps one option an array; a bare string would not be passed on as an argument.
+  if ($env:FC_SETUP_ARGS) { $setupArgs = @($env:FC_SETUP_ARGS -split '\s+' | Where-Object { $_ }) }
 
   Assert-Node
   Get-Code $dir

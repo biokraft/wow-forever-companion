@@ -153,10 +153,12 @@ function windowsShims({ node = '22' } = {}) {
   ]);
 }
 function ps(env = {}) {
+  // Windows spells the variable Path, PATH or path; drop every spelling before setting ours.
+  const withoutPath = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.toLowerCase() !== 'path'));
   const system = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32');
   return spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(ROOT, 'install.ps1')], {
     encoding: 'utf8',
-    env: { ...process.env, Path: `${shims};${system}`, PATH: undefined, FC_DIR: dir, FC_TEST_LOG: log, FC_SETUP_ARGS: '--yes', ...env },
+    env: { ...withoutPath, Path: `${shims};${system}`, FC_DIR: dir, FC_TEST_LOG: log, FC_SETUP_ARGS: '--yes', ...env },
   });
 }
 
