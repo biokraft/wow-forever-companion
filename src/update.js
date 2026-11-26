@@ -1,10 +1,12 @@
-// wowf update: pulls the newest release into this clone, then refreshes what depends on it
-// (the overlay's packages when their lockfile changed, the addon in the game folder).
+// wowf update: gets the newest version (with git in a clone, as a download otherwise), then
+// refreshes what depends on it (the overlay's packages when their lockfile changed, the addon
+// in the game folder).
 // Commands get argument arrays and the clone as `cwd`; no path is ever put into a command.
 import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { installOverlayPackages, electronMissingText, installRetryHint } from './setup.js';
+import { fetchNewest, replaceTree } from './update-archive.js';
 
 const REPO_PAGE = 'https://github.com/biokraft/wow-forever-companion';
 const SETUP = 'node bin/wowf setup';
@@ -66,21 +68,94 @@ function changelogSection(readFile, repoDir, version) {
  *   run(cmd: string, args: string[], o: { cwd: string }): Promise<{ code: number, stdout?: string }>,
  *   exists(p: string): boolean, cfg: { gameDir?: string } | null,
  *   installAddon(gameDir: string): string, say(text: string): void,
- *   readFile?(p: string): string, nodeVersion?: string, platform?: string }} deps
- * @returns {Promise<{ ok: boolean, code: 'not-git' | 'dirty' | 'detached' | 'pull-failed' | 'current' | 'updated' }>}
+ *   readFile?(p: string): string, nodeVersion?: string, platform?: string,
+ *   archive?: { fetchNewest(o: { run: Function }): Promise<{ tree: string, cleanup(): void }>, replaceTree(tree: string, repoDir: string): void } }} deps
+ * @returns {Promise<{ ok: boolean, code: 'download-failed' | 'copy-failed' | 'dirty' | 'detached' | 'pull-failed' | 'current' | 'updated' }>}
  */
-export async function runUpdate({ repoDir, run, exists, cfg, installAddon, say, readFile = (p) => fs.readFileSync(p, 'utf8'), nodeVersion = process.version, platform = process.platform }) {
+export async function runUpdate({ repoDir, run, exists, cfg, installAddon, say, readFile = (p) => fs.readFileSync(p, 'utf8'), nodeVersion = process.version, platform = process.platform, archive = { fetchNewest, replaceTree } }) {
   const git = async (...args) => {
     try { return await run('git', args, { cwd: repoDir }); } catch (e) { return { code: 1, stdout: String(e?.message ?? '') }; }
   };
+  const overlayDir = path.join(repoDir, 'overlay');
+  const lockPath = path.join(repoDir, ...LOCKFILE.split('/'));
 
-  // 1. A ZIP download has no history to pull.
+  // What follows the new files, however they arrived. `depsChanged` is asked only when the
+  // overlay is installed.
+  const finish = async ({ updated, fromVersion, depsChanged }) => {
+    const toVersion = readVersion(readFile, repoDir);
+    let ok = true;
+    if (updated) {
+      say(fromVersion && toVersion && fromVersion !== toVersion
+        ? `Updated Forever Companion from ${fromVersion} to ${toVersion}.`
+        : `Updated Forever Companion${toVersion ? ` (${toVersion})` : ''}.`);
+      // The overlay's packages, when their lockfile changed (more than the release version
+      // fields) and the overlay is installed.
+      if (exists(path.join(overlayDir, 'node_modules')) && await depsChanged()) {
+        say("Updating the overlay's packages (npm ci)...");
+        const r = await installOverlayPackages({ run, exists, overlayDir, readFile });
+        if (!r.ok) {
+          ok = false;
+          if (r.output) say(r.output);
+          say(r.failed === 'electron'
+            ? electronMissingText(nodeVersion, platform)
+            : `Updating the overlay's packages failed, so the overlay may not start. ${installRetryHint(platform)} Then run: ${SETUP}`);
+        }
+      }
+    } else {
+      say(`Already up to date${toVersion ? ` (${toVersion})` : ''}.`);
+    }
+
+    // The addon in the game folder (also when already up to date, so an old copy is replaced).
+    if (cfg?.gameDir) {
+      try {
+        installAddon(cfg.gameDir);
+        say('Refreshed the ForeverLog addon in the game folder.');
+      } catch (e) {
+        ok = false;
+        say(`Could not refresh the addon (${e?.message ?? e}). Close WoW, then run: ${SETUP}`);
+      }
+    } else {
+      say(`No game folder is set up, so the addon was not refreshed. Run: ${SETUP}`);
+    }
+
+    // What the player does next, and what is new.
+    if (updated) say('If the overlay is running, run node bin/wowf overlay again to restart it with the new version.');
+    say('If WoW is running, type /reload in game to load the addon.');
+    const notes = updated && toVersion && toVersion !== fromVersion ? changelogSection(readFile, repoDir, toVersion) : null;
+    if (notes) say(`\nWhat's new in ${toVersion}:\n${notes}`);
+    return { ok, code: updated ? 'updated' : 'current' };
+  };
+
+  // 1. Not a git clone (the installer downloaded it, or a ZIP was unpacked): there is no
+  // history to pull, so the newest code is downloaded and copied over this folder.
   if (!exists(path.join(repoDir, '.git'))) {
-    say(`This folder is not a git clone (it was probably downloaded as a ZIP), so it cannot update itself.
-To update: open ${REPO_PAGE}, choose Code, then Download ZIP, unpack it in place of this folder,
-then run: ${SETUP}
-Your settings and progress data live elsewhere and are kept.`);
-    return { ok: false, code: 'not-git' };
+    const fromVersion = readVersion(readFile, repoDir);
+    let lockBefore = null;
+    try { lockBefore = withoutOwnVersion(readFile(lockPath)); } catch { /* compared as changed */ }
+    say('Downloading the newest version from GitHub...');
+    let newest;
+    try {
+      newest = await archive.fetchNewest({ run });
+    } catch (e) {
+      say(`The download failed, so nothing was changed (${e?.message ?? e}). Try again later.`);
+      return { ok: false, code: 'download-failed' };
+    }
+    try {
+      archive.replaceTree(newest.tree, repoDir);
+    } catch (e) {
+      say(`Copying the new files stopped part-way (${e?.message ?? e}). Close the chat overlay, then run: node bin/wowf update again.
+If that keeps failing, install again with the line from ${REPO_PAGE}; your settings and progress data live elsewhere and are kept.`);
+      return { ok: false, code: 'copy-failed' };
+    } finally {
+      newest.cleanup();
+    }
+    return finish({
+      updated: true,
+      fromVersion,
+      depsChanged: () => {
+        try { return lockBefore === null || !isDeepStrictEqual(lockBefore, withoutOwnVersion(readFile(lockPath))); } catch { return true; }
+      },
+    });
   }
 
   // 2. Local changes to tracked files: stop, so nothing of the player's is overwritten.
@@ -125,49 +200,12 @@ Undo or save them (for example: git stash), then run: node bin/wowf update`);
     return { ok: false, code: 'pull-failed' };
   }
   const updated = before !== after;
-  const toVersion = readVersion(readFile, repoDir);
-  let ok = true;
-
-  if (updated) {
-    say(fromVersion && toVersion ? `Updated Forever Companion from ${fromVersion} to ${toVersion}.` : 'Updated Forever Companion.');
-
-    // 4. The overlay's packages, when their lockfile changed (more than the release version
-    // fields) and the overlay is installed.
-    const diff = await git('diff', '--name-only', before, after);
-    const overlayDir = path.join(repoDir, 'overlay');
-    if (lines(diff.stdout).includes(LOCKFILE) && exists(path.join(overlayDir, 'node_modules'))
-      && await overlayDepsChanged({ git, before, readFile, repoDir })) {
-      say("Updating the overlay's packages (npm ci)...");
-      const r = await installOverlayPackages({ run, exists, overlayDir, readFile });
-      if (!r.ok) {
-        ok = false;
-        if (r.output) say(r.output);
-        say(r.failed === 'electron'
-          ? electronMissingText(nodeVersion, platform)
-          : `Updating the overlay's packages failed, so the overlay may not start. ${installRetryHint(platform)} Then run: ${SETUP}`);
-      }
-    }
-  } else {
-    say(`Already up to date${toVersion ? ` (${toVersion})` : ''}.`);
-  }
-
-  // 5. The addon in the game folder (also when already up to date, so an old copy is replaced).
-  if (cfg?.gameDir) {
-    try {
-      installAddon(cfg.gameDir);
-      say('Refreshed the ForeverLog addon in the game folder.');
-    } catch (e) {
-      ok = false;
-      say(`Could not refresh the addon (${e?.message ?? e}). Close WoW, then run: ${SETUP}`);
-    }
-  } else {
-    say(`No game folder is set up, so the addon was not refreshed. Run: ${SETUP}`);
-  }
-
-  // 6 and 7. What the player does next, and what is new.
-  if (updated) say('If the overlay is running, run node bin/wowf overlay again to restart it with the new version.');
-  say('If WoW is running, type /reload in game to load the addon.');
-  const notes = updated && toVersion ? changelogSection(readFile, repoDir, toVersion) : null;
-  if (notes) say(`\nWhat's new in ${toVersion}:\n${notes}`);
-  return { ok, code: updated ? 'updated' : 'current' };
+  return finish({
+    updated,
+    fromVersion,
+    depsChanged: async () => {
+      const diff = await git('diff', '--name-only', before, after);
+      return lines(diff.stdout).includes(LOCKFILE) && overlayDepsChanged({ git, before, readFile, repoDir });
+    },
+  });
 }

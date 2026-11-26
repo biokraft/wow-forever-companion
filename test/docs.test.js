@@ -7,28 +7,33 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const readme = () => read('README.md');
-const PLAYER_DOCS = ['README.md', 'docs/SETUP.md', 'docs/AGENT-INSTALL.md'];
+const reference = () => read('docs/REFERENCE.md');
+const PLAYER_DOCS = ['README.md', 'docs/SETUP.md', 'docs/REFERENCE.md', 'docs/AGENT-INSTALL.md'];
+const RAW = 'https://raw.githubusercontent.com/biokraft/wow-forever-companion/main';
 
-test('README documents every wowf command', () => {
+test('the reference documents every wowf command', () => {
   const usage = read('src/cli.js').match(/const USAGE = `([\s\S]*?)`;/)[1];
   const cmds = [...usage.matchAll(/^  ([a-z-]+)\b/gm)].map((m) => m[1]);
   assert.ok(cmds.length >= 9);
-  for (const c of cmds) assert.match(readme(), new RegExp(`wowf ${c}\\b`), c);
+  for (const c of cmds) assert.match(reference(), new RegExp(`wowf ${c}\\b`), c);
 });
 
-test('README documents every config key', () => {
+test('the reference documents every config key', () => {
   for (const k of ['gameDir', 'dataDir', 'main', 'updateCheck', 'overlay.backend', 'overlay.model', 'overlay.claudeModel', 'overlay.hotkey', 'overlay.button', 'overlay.chat', 'overlay.opacity']) {
-    assert.ok(readme().includes(k), k);
+    assert.ok(reference().includes(k), k);
   }
 });
 
-test('README carries the Claude subscription terms note', () => {
-  assert.match(readme(), /Free, Pro, Max/);
+test('the reference carries the Claude subscription terms note, and the README links to the reference', () => {
+  assert.match(reference(), /Free, Pro, Max/);
+  assert.ok(readme().includes('(docs/REFERENCE.md)'));
 });
 
-test('README has the two-line install, the agent install line and the update command', () => {
+test('README has the one-line installs, the install by hand, the agent install line and the update command', () => {
   const text = readme();
   for (const s of [
+    `curl -fsSL ${RAW}/install.sh | sh`,
+    `irm ${RAW}/install.ps1 | iex`,
     'git clone https://github.com/biokraft/wow-forever-companion.git',
     'node bin/wowf setup',
     'Let your agent install it',
@@ -106,6 +111,13 @@ test('CHANGELOG keeps unreleased work in its own section above the released vers
   const section = text.slice(headings[0].index, headings[1].index);
   assert.match(section, /game plan/i);
   assert.match(section, /chips/i);
+});
+
+test('the setup guide shows the same one-line installs and links both scripts', () => {
+  const text = read('docs/SETUP.md');
+  for (const s of [`curl -fsSL ${RAW}/install.sh | sh`, `irm ${RAW}/install.ps1 | iex`, '(../install.sh)', '(../install.ps1)']) {
+    assert.ok(text.includes(s), s);
+  }
 });
 
 test('player docs say About me holds the rest and the game plan holds goals and build', () => {
