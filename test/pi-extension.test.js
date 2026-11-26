@@ -380,6 +380,25 @@ test('without a spell list the state text says the addon is older, instead of im
   assert.match(spellsLine([]), /none recorded yet/);
 });
 
+test('the state text lists the bank once per item with totals, and says when it was seen', async () => {
+  const { bankLine } = await import('../pi/tools.js');
+  const bank = {
+    time: 1795600000 - 7200, slotsFree: 20, slotsTotal: 28,
+    items: [
+      { bag: -1, slot: 1, count: 20, item: { name: 'Copper Ore' } }, { bag: -1, slot: 2, count: 14, item: { name: 'Copper Ore' } },
+      { bag: 5, slot: 1, count: 1, item: { name: 'Mining Pick' } }, { bag: 5, slot: 2, count: 3, item: null },
+    ],
+  };
+  assert.equal(bankLine(bank, 1795600000), 'Bank as seen 2 h ago (20 of 28 slots free): Copper Ore x34, Mining Pick');
+  assert.match(bankLine({ time: 1795600000, items: [], slotsFree: 24, slotsTotal: 24 }, 1795600000), /: empty\.$/);
+});
+
+test('without a bank visit the state text says the bank was not seen, not that it is empty', async () => {
+  const { bankLine, stateText } = await import('../pi/tools.js');
+  assert.match(bankLine(undefined), /not seen yet/);
+  assert.match(stateText({ name: 'Testa', level: 13 }, '/data/characters/x.json', 1795600000), /^Bank: not seen yet/m);
+});
+
 test('the state text survives an older snapshot whose empty gear slots are null', async () => {
   const { stateText } = await import('../pi/tools.js');
   const text = stateText({ name: 'Testa', level: 13, equipped: { 1: null, 4: { name: 'Shirt' }, 16: { name: 'Axe' } } }, '/data/characters/x.json', 1795600000);

@@ -35,6 +35,14 @@ does not do that.
   `spells`. A spell that is listed is known. One that is not listed is "not in your synced
   spellbook": say that, and how to check in the game, rather than "you do not have it". Without a `spells` list the addon is older than spell tracking: say you cannot
   see the spellbook and ask the player to update, `/reload` and `/fc sync`.
+  `bank` holds what was in the bank at the player's last bank visit (`items` like the bag
+  items, `slotsFree`, `slotsTotal`, and `time`, when it was seen); the state summary has a
+  `Bank` line with totals per item. The game shows the bank only while its window is open,
+  so this can be behind: give its age when it matters ("14 Copper Ore in your bank as of
+  2 days ago"). When the player plans to craft, buy or farm something, check the bags and the
+  bank first and say when part of it is already in the bank. Without `bank` the bank was
+  never seen: say so and ask them to open the bank once, then `/fc sync`; never treat it as
+  empty.
 - `characters/<realm>-<name>.journal.jsonl`: history (level, quest_accept, quest_turnin, loot,
   equip, skill, spell, death, zone, trainer, session_money). Read the last ~50 lines, not all of it.
 
@@ -106,7 +114,7 @@ each prompt from the Claude Code hook and `wowf sync`; before each turn in Pi) a
   progress from last sync", the whole quest log was not read live yet: that part is the
   snapshot's.
 - Gear, bags, talents, skills, spells, reputations and completed quests still come only from the
-  snapshot and need `/fc sync` to refresh.
+  snapshot and need `/fc sync` to refresh. The bank also needs a bank visit before that sync.
 - A quest that left the log (`leftLog: true`, "left the log") was turned in or abandoned; the
   next sync confirms which. Say that; never call it ready to turn in or count it done.
 - Per-quest live progress: `wow_state` in Pi, `wowf state` (or `wowf state --json`) in Claude
