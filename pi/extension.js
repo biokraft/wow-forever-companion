@@ -49,13 +49,13 @@ export default function foreverCompanion(pi, { loadConfig = defaultLoadConfig } 
     }, ['action']),
     (c, p) => wowGamePlan({ cfg: c, action: p.action, plan: p.plan }));
 
-  tool('wow_classdata', 'WoW class data', 'Show what is saved about the character\'s class (action "show") or save researched class data (action "write" with data: classFile, checked YYYY-MM-DD, sources, armor, armorFrom40, weapons, statWeights, dualWieldLevel, note; see the wow-advisor skill). The upgrade reminders are worked out from it. Invalid data is refused with every reason and the old data is kept.',
+  tool('wow_classdata', 'WoW class data', 'Show what is saved about the character\'s class (action "show") or save researched class data (action "write" with data: classFile, checked YYYY-MM-DD, sources, armor, armorFrom40, weapons, statWeights, dualWieldLevel, note; see the wow-advisor skill). The upgrade reminders are worked out from it. Every source on the allowed sites must be a page read with wow_web_fetch (at least one), or a source of a saved note. Invalid data is refused with every reason and the old data is kept.',
     obj({
       action: { type: 'string', enum: ['show', 'write'] },
       data: { type: 'object', description: 'The whole class data for action "write" (it replaces the old one)' },
     }, ['action']),
     (c, p) => wowClassData({ cfg: c, action: p.action, data: p.data }));
-  tool('wow_knowledge', 'WoW knowledge', 'List, show, or save researched notes (markdown with frontmatter: topic, sources, checked YYYY-MM-DD, scope). Cached notes live in the player\'s data folder; entries older than 14 days are stale. Slug "progress" holds the player\'s dated progress notes: no frontmatter needed, never stale.',
+  tool('wow_knowledge', 'WoW knowledge', 'List, show, or save researched notes (markdown with frontmatter: topic, sources, checked YYYY-MM-DD, scope). Cached notes live in the player\'s data folder; entries older than 14 days are stale. A note may cite a page on the allowed sites only when it was read with wow_web_fetch or is a source of a saved note. Slug "progress" holds the player\'s dated progress notes: no frontmatter needed, never stale.',
     obj({
       action: { type: 'string', enum: ['list', 'show', 'write'] },
       slug: { type: 'string', description: 'lowercase-dash name, e.g. hunter-leveling' },
