@@ -6,6 +6,11 @@
   companion can tell you when something you want to craft, buy or farm is already there.
   It knows the bank as of your last visit and says how long ago that was. After updating,
   type `/reload`, open your bank once and type `/fc sync`.
+- **A changed game plan can be taken back.** Each time the game plan is saved, the plan
+  before it is kept next to it in your data folder (`gameplans/<character>.previous.json`).
+- **Using another AI than Claude Code (through Pi):** the companion can now save what it
+  researched about your class there too, so the "upgrade in bags" reminder works; and it
+  can no longer save research that names web pages it did not read.
 
 ## 0.5.0 (2026-11-26)
 
