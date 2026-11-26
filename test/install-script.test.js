@@ -19,7 +19,7 @@ beforeEach(() => {
   shims = path.join(root, 'shims');
   fs.mkdirSync(shims);
   log = path.join(root, 'calls.log');
-  dir = path.join(root, 'home dir', 'wow-forever-companion'); // a space, as in "C:\Users\Some Player"
+  dir = path.join(root, 'home dir', 'wow-forever-companion'); // a space, as in many Windows user folders
 });
 afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
 
