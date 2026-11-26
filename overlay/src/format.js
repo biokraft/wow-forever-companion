@@ -25,8 +25,10 @@ export function renderLite(text) {
   return inline(escapeHtml(held)).replace(/\u0000(\d+)\u0000/g, (_m, i) => links[Number(i)]);
 }
 
-// Block-level markdown for answers: headings, lists, tables, rules, quotes, paragraphs.
-// Every line goes through renderLite, which escapes HTML first.
+// Block-level markdown for answers: headings, lists, code blocks, tables, rules, quotes,
+// paragraphs. Every line goes through renderLite, which escapes HTML first; code block
+// lines are only escaped.
+const FENCE = /^(\s*)(`{3,}|~{3,})\s*[\w+-]*\s*$/;
 const TABLE_ROW = /^\s*\|.*\|\s*$/;
 const TABLE_RULE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 const cells = (line) => line.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
@@ -59,6 +61,24 @@ export function renderMarkdown(text) {
     const raw = lines[i];
     const line = raw.trimEnd();
     let m;
+    // A fenced code block (a macro, a command): shown exactly as written, never formatted,
+    // so "#showtooltip" is not a heading and "/cast [stance:1]" keeps its brackets. The
+    // fence's own indent comes off each line (a block under a list step is indented). A
+    // block still arriving while streaming runs to the end of the text.
+    if ((m = FENCE.exec(line))) {
+      flush();
+      const indent = m[1].length;
+      const mark = m[2][0];
+      const closing = new RegExp(`^\\s*\\${mark}{${m[2].length},}\\s*$`);
+      const code = [];
+      for (i += 1; i < lines.length && !closing.test(lines[i]); i++) {
+        const lead = /^\s*/.exec(lines[i])[0].length;
+        code.push(lines[i].slice(Math.min(indent, lead)).trimEnd());
+      }
+      while (code.length && !code[code.length - 1]) code.pop();
+      out.push(`<pre class="code"><code>${escapeHtml(code.join('\n'))}</code></pre>`);
+      continue;
+    }
     if (!line.trim()) { flush(); continue; }
     // A table needs its header row and the |---| rule under it; until both have arrived
     // (while streaming) the header stays an ordinary line.

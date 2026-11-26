@@ -68,6 +68,10 @@ function add(kind, text, at) {
 // and the time it was written, so an old "you have 63s now" does not read as current.
 function addActions(bubble) {
   if (!bubble.dataset.raw) return;
+  // Each code block (a macro to paste into the game) has its own Copy for just that block.
+  for (const pre of bubble.querySelectorAll('pre.code')) {
+    pre.append(copyButton(pre.querySelector('code')?.textContent ?? ''));
+  }
   const box = document.createElement('div');
   box.className = 'msg-actions';
   box.append(copyButton(bubble.dataset.raw));

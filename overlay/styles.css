@@ -90,6 +90,11 @@ html, body { margin: 0; height: 100%; background: #0c0b0e; color: var(--ink); fo
 .msg.bot th, .msg.bot td { padding: 2px 6px; text-align: left; vertical-align: top; border: 1px solid var(--bronze-dark); }
 .msg.bot th { color: var(--gold); font-weight: 400; background: #1d150a; border-bottom-color: var(--bronze); }
 .msg.bot tbody tr:nth-child(even) td { background: rgba(255, 209, 0, 0.04); }
+/* A macro or command to paste: monospace, as written, with its own Copy top right */
+.msg.bot pre.code { position: relative; margin: 2px 0 8px; padding: 6px 8px; background: rgba(0, 0, 0, 0.45); border: 1px solid var(--bronze-dark); border-left: 2px solid var(--bronze); border-radius: 2px; overflow-x: auto; white-space: pre; }
+.msg.bot pre.code code { background: none; border: 0; padding: 0; font: 12px/1.5 Menlo, Consolas, monospace; color: var(--ink); }
+.msg.bot pre.code .copy { position: absolute; top: 3px; right: 3px; visibility: hidden; }
+.msg.bot pre.code:hover .copy, .msg.bot pre.code .copy:focus { visibility: visible; }
 .msg.bot blockquote { margin: 0 0 6px; padding-left: 8px; border-left: 2px solid var(--bronze); color: var(--muted); }
 /* Top right of a finished answer, on the "Companion" line: the time it was written, and
    Copy only while pointed at */
